@@ -1,4 +1,2 @@
 # eoa-webapp
-Creek Data Visualization Tool
-
-This is Nick!!!
+Creek Data Visualization Tool~
