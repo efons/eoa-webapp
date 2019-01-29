@@ -1,5 +1,6 @@
 # eoa-webapp
-💧 Creek Data Visualization Tool 
-💧 SCVURPPP © 2019
+Creek Data Visualization Tool 💦
 
-💧 Run locally: shinyApp(ui_db, server)
+SCVURPPP © 2019
+
+ Run locally: shinyApp(ui_db, server)
