@@ -1,7 +1,8 @@
 
 # EOA's website redesign 
 # Data visualization app 
-# Emilie Fons 
+# Emilie Fons
+# Michaela Palmer
 
 
 # Script 2 - User interface
