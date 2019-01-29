@@ -126,7 +126,7 @@ server <- (function(input, output, session) {
   
   
   # Data Table 
-  # data table title 
+  # Data Table title 
   output$score_tables <- renderText({
     ifelse(!input$size_by == "none",
            paste(bio_vars_filter$name[which(bio_vars_filter$param == input$filter_by)]," and ",param_names[which(param_names$dataname == input$size_by),"fullname"], " for ", input$wy[1], " - ", input$wy[2], sep=""),
@@ -153,7 +153,17 @@ server <- (function(input, output, session) {
   }, bordered=T, align='c', hover=T, sanitize.text.function = function(x) x)
   # error: unknomw column ""
   
+  # Downloadable csv of selected dataset ----
+  output$downloadData <- downloadHandler(
+    filename = function() {
+      paste(input$spatial_filter, ".csv", sep = "")
+    },
+    content = function(file) {
+      write.csv(data_sub(), file, row.names = FALSE)
+    }
+  )
   
+
   # Scatter Plots 
   
   output$scatterplots <- renderText({
