@@ -2,6 +2,7 @@
 # EOA's website redesign 
 # Data visualization app 
 # Emilie Fons 
+# Michaela Palmer
 
 
 # Script 3 - Server function 
