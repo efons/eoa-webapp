@@ -20,8 +20,8 @@ server <- (function(input, output, session) {
   
   # map parameter : size filter by stressor variable 
   observe({updateSelectizeInput(session, 'size_by', 
-                                choices = if(!input$filter_by == "tot_phab") {list("None"=c("None"='none'),
-                                                                                   "Habitat"=c("Total PHAB" = "tot_phab",
+                                choices = list(
+                                                "Habitat"=c("Total PHAB" = "tot_phab",
                                                                                                "Epifaunal Substrate"="epifaun_substr",
                                                                                                "Sediment Deposition" = "sed_deposition",
                                                                                                "Shannon Diversity (Natural Substrates)" = "shannon_nst",
@@ -29,39 +29,19 @@ server <- (function(input, output, session) {
                                                                                                "Percent Boulders - large & small" = "pct_boulder_ls",
                                                                                                "Percent Fast Water of Reach"="pct_fast_water",
                                                                                                "IPI Score" = "ipi",
-                                                                                               "% Impervious Area - Watershed"="pct_imperv_ws",
+                                                                                              "% Impervious Area - Watershed"="pct_imperv_ws",
                                                                                                "Road density - Watershed" = "road_dsty_ws"),
-                                                                                   "Biomass" = c("Chlorophyll a (mg/m2)" = "chloro_a_mg_m2",
+                                                "Biomass" = c("Chlorophyll a (mg/m2)" = "chloro_a_mg_m2",
                                                                                                  "AFDM (g/m2)" = "afdm_g_m2",
                                                                                                  "% Macroalgae Cover" = "pct_macroalg_cvr"),
-                                                                                   "Nutrients"= c("Total Nitrogen (mg/L)" = "tn_mg_l",
+                                                 "Nutrients"= c("Total Nitrogen (mg/L)" = "tn_mg_l",
                                                                                                   "Total Phosphorus(mg/L)" = "tp_mg_l",
                                                                                                   "Unionized Ammonia (ug/L)" = "uia_ug_l"),
-                                                                                   "Water Quality" = c("Temperature (C)"="temp_c",
+                                                 "Water Quality" = c("Temperature (C)"="temp_c",
                                                                                                        "Dissolved Oxygen"="do_mg_l",
                                                                                                        "Conductivity (uS/cm)" = "sp_cond_us_cm"),
-                                                                                   "Other" = c("Human Disturbance Index (HDI)" = "crhdi_swamp"))}
-                                else {list("None"=c("None"='none'),
-                                           "Habitat"=c(
-                                             "Epifaunal Substrate"="epifaun_substr",
-                                             "Sediment Deposition" = "sed_deposition",
-                                             "Shannon Diversity (Natural Substrates)" = "shannon_nst",
-                                             "% Substrate Smaller than Sand (<2 mm)" = "pct_smaller_sand",
-                                             "Percent Boulders - large & small" = "pct_boulder_ls",
-                                             "Percent Fast Water of Reach"="pct_fast_water",
-                                             "IPI Score" = "ipi",
-                                             "% Impervious Area - Watershed"="pct_imperv_ws",
-                                             "Road density - Watershed" = "road_dsty_ws"),
-                                           "Biomass" = c("Chlorophyll a (mg/m2)" = "chloro_a_mg_m2",
-                                                         "AFDM (g/m2)" = "afdm_g_m2",
-                                                         "% Macroalgae Cover" = "pct_macroalg_cvr"),
-                                           "Nutrients"= c("Total Nitrogen (mg/L)" = "tn_mg_l",
-                                                          "Total Phosphorus(mg/L)" = "tp_mg_l",
-                                                          "Unionized Ammonia (ug/L)" = "uia_ug_l"),
-                                           "Water Quality" = c("Temperature (C)"="temp_c",
-                                                               "Dissolved Oxygen"="do_mg_l",
-                                                               "Conductivity (uS/cm)" = "sp_cond_us_cm"),
-                                           "Other" = c("Human Disturbance Index (HDI)" = "crhdi_swamp"))}, selected = ifelse(input$filter_by=="tot_phab" ,'none','tot_phab'))
+                                                 "Other" = c("Human Disturbance Index (HDI)" = "crhdi_swamp"))
+                                , selected = 'tot_phab')
   })
   
   # Spatial Filter: county vs. watersheds 
@@ -92,11 +72,9 @@ server <- (function(input, output, session) {
     data_sub <- df_bio %>% filter(year >= input$wy[1] & year <= input$wy[2]) %>%
       filter(if (input$spatial_filter == "sub_ws") {ws %in% input$ws} else {ws %in% bio_vars_ws} )%>%
       mutate(year=factor(year, levels=seq(min(bio_vars_yr),max(bio_vars_yr),1))) %>%
-      dplyr::select(if (size_by == "none") {c("rmc_id","ws", "creek","year", filter_by)} 
-                    else {c("rmc_id","ws", "creek","year", filter_by, size_by)})  %>%
+      dplyr::select(c("rmc_id","ws", "creek","year", filter_by, size_by))  %>%
       arrange(desc(year),ws) %T>%
-      {names(.)<- if (size_by == "none") {c("RMC ID","Watershed","Creek", "Year", filter_name)}
-      else {c("RMC ID","Watershed","Creek", "Year", filter_name, size_name)} } 
+      {names(.)<- c("RMC ID","Watershed","Creek", "Year", filter_name, size_name) } 
     
     
     # color cells for likely altered site - add new column (values stored as characters)
@@ -105,24 +83,24 @@ server <- (function(input, output, session) {
       
       data_sub <- data_sub %>%
         mutate(filter_by_chr = NA ) %>% # Makes unknown column'' error appear 
-        select(if (size_by == "none") {c(1,2,3,4,5,6)} else {c(1,2,3,4,5,7,6)}) %>%
-        rename_at(6, ~paste(filter_name,".", sep=''))
+        select(c(1,2,3,4,5,7,6)) %>%
+        rename_at(6, ~paste(filter_name," ", sep=''))
       
       
       
       for (i in 1:nrow(data_sub)) {
         if(!is.na(data_sub[i,5])){
           if (data_sub[i,5] <= threshold1)  {
-            data_sub[i, 6] <- paste('<div style="width: 100%; height: 100%; z-index: 0; color: red; position:absolute; top: 0; left: 0; padding:5px;"><span>',signif(data_sub[i,5],2),'</span></div>')
+            data_sub[i, 6] <- paste('<div style="width: 100%; height: 100%; z-index: 0; color:', colors_bio[4],'; position:absolute; top: 0; left: 0; padding:5px;"><span>',signif(data_sub[i,5],2),'</span></div>')
           }
           else {if (data_sub[i,5]< threshold2){
-            data_sub[i, 6] <- paste('<div style="width: 100%; height: 100%; z-index: 0; color: orange; position:absolute; top: 0; left: 0; padding:5px;"><span>',signif(data_sub[i,5],2),'</span></div>')
+            data_sub[i, 6] <- paste('<div style="width: 100%; height: 100%; z-index: 0; color: ', colors_bio[3],'; position:absolute; top: 0; left: 0; padding:5px;"><span>',signif(data_sub[i,5],2),'</span></div>')
           }
             else {if (data_sub[i,5] < threshold3) {
-              data_sub[i, 6] <- paste('<div style="width: 100%; height: 100%; z-index: 0; color: green; position:absolute; top: 0; left: 0; padding:5px;"><span>',signif(data_sub[i,5],2),'</span></div>')
+              data_sub[i, 6] <- paste('<div style="width: 100%; height: 100%; z-index: 0; color: ', colors_bio[2],'; position:absolute; top: 0; left: 0; padding:5px;"><span>',signif(data_sub[i,5],2),'</span></div>')
             }
               else {if (threshold3>=0) {
-                data_sub[i, 6] <- paste('<div style="width: 100%; height: 100%; z-index: 0; color: blue; position:absolute; top: 0; left: 0; padding:5px;"><span>',signif(data_sub[i,5],2),'</span></div>')
+                data_sub[i, 6] <- paste('<div style="width: 100%; height: 100%; z-index: 0; color: ', colors_bio[1],'; position:absolute; top: 0; left: 0; padding:5px;"><span>',signif(data_sub[i,5],2),'</span></div>')
               }
                 else  {data_sub[i, 6] <- paste('<div style="width: 100%; height: 100%; z-index: 0; color: black; position:absolute; top: 0; left: 0; padding:5px;"><span>',signif(data_sub[i,5],2),'</span></div>')}
                 
@@ -169,8 +147,8 @@ server <- (function(input, output, session) {
   # create Table when data set not empty 
   output$score_table <- renderTable({
     t<-data_sub() 
-    if (ncol(t)==7) {return(t[,c(1,2,3,4,6,7)])}
-    else {return(t[,c(1,2,3,4,6)])}
+    return(t[,c(1,2,3,4,6,7)])
+   
     
   }, bordered=T, align='c', hover=T, sanitize.text.function = function(x) x)
   # error: unknomw column ""
@@ -333,10 +311,10 @@ server <- (function(input, output, session) {
     
     getColor <- function() {
       if (! (filter_by == "none")){
-        ifelse(data_sub$filter<threshold1,"red", 
-               ifelse(data_sub$filter<threshold2,"orange",
-                      ifelse(data_sub$filter<threshold3,"green",
-                             ifelse(threshold3<0,"white","blue"))))
+        ifelse(data_sub$filter<threshold1,colors_bio[4], 
+               ifelse(data_sub$filter<threshold2,colors_bio[3],
+                      ifelse(data_sub$filter<threshold3,colors_bio[2],
+                             ifelse(threshold3<0,"white",colors_bio[1]))))
       }
       else "white"
       
@@ -361,16 +339,16 @@ server <- (function(input, output, session) {
                          fill=T, fillColor=getColor(), fillOpacity = 0.6,
                          options=leafletOptions(pane="markers")) %>%
         addLegendCustom(position="topright",opacity = 1, borders=c("white",'white', 'white', "white"),
-                        colors=c("blue","green", "orange", 'red'), 
+                        colors=colors_bio, 
                         labels=c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered"),
                         sizes=c(rep(12,4)), shapes=rep("circle",4), 
                         title= as.character(filter_name)) 
       
-      if(input$show_creeks == "yes")
-      {
+      #if(input$show_creeks == "yes")
+      #{
         #leafletProxy("map_sites") %>% 
         # addPolylines(data=creeks, weight=1, color="black")
-      }
+      #}
     }
     
     

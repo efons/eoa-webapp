@@ -56,10 +56,11 @@ sites <- read_excel("sites master file.xlsx", na=c("", "NA", "#N/A"),sheet="copy
 
 
 # make sure shp watershed names are consistent with sites file
-ws <- c("Lower Penitencia Creek", "San Francisquito Creek", "Coyote Creek", "Matadero/Barron Creeks", "Adobe Creek", "Sunnyvale West", "Guadalupe River", "Permanente Creek", "Calabazas Creek", "San Tomas Aquino", "Sunnyvale East","Stevens Creek")
+ws <- c("Lower Penitencia", "San Francisquito", "Coyote", "Matadero/Barron", "Adobe", "Sunnyvale West", "Guadalupe", "Permanente", "Calabazas", "San Tomas Aquino", "Sunnyvale East","Stevens")
 sites$watershed <- ifelse(!is.na(sites$watershed) & sites$watershed == "San Thomas Aquino", "San Tomas Aquino", sites$watershed)
 sites$watershed <- ifelse(!is.na(sites$watershed) & sites$watershed == "Matadero Creek", "Matadero/Barron Creeks", sites$watershed)
-unique(sites$watershed) %in% ws # NB: Alameda not in SC county 
+sites$watershed <- mapvalues(sites$watershed, from=unique(sites$watershed), to=c(NA,"Alameda","Coyote","Guadalupe", "San Tomas Aquino", "Calabazas", "Stevens", "Lower Penitencia","Matadero/Barron","Adobe","Permanente","San Francisquito"))
+
 sheds <- sheds[!(sheds$SYSTEM %in% c("Coyote and Lower Pen", "Arroyo la Laguna", "Baylands", "Dumbarton South")),] # remove useless ws
 ws_sheds <- unique(sheds$SYSTEM)
 sheds$SYSTEM <- mapvalues(sheds$SYSTEM, from=ws_sheds, to=ws) # change ws names in shapefile to make them the same as in data file 
@@ -126,7 +127,7 @@ df_bio <- df_bio %>% filter(year %in% seq(2012,2018,1)) %>% dplyr::select(select
          road_dsty_ws=sites$road_dsty_ws[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)]) %>%
   mutate(pct_imperv_ws =  pct_imperv_ws * 100)
 
-# Variables that will be used in ui 
+# Variables that will be used in ui and server
 bio_vars_yr <- unique(df_bio$year)
 bio_vars_filter <- data.frame(param=c("csci", "asci_hyb", "asci_diatom", 's2',"d18", 'h20',"tot_phab"),
                           name= c("CSCI Score", "ASCI Hybrid Score", "ASCI Diatom Score","S2 Benthic Algae Score", "D18 Benthic Algae Score","H20 Benthic Algae Score", "Total PHAB"),
@@ -135,7 +136,7 @@ bio_vars_filter <- data.frame(param=c("csci", "asci_hyb", "asci_diatom", 's2',"d
                           threshold3=c(0.92,-1, -1,60,72,70,46)) # NB: set threshold to -1 when no threshold 
 bio_vars_ws <- sort(factor(unique(sheds$SYSTEM), levels=sort(unique(as.character(sheds$SYSTEM)))))
 
-
+colors_bio <- c("green", "orange", "red","purple")
 
 
 
