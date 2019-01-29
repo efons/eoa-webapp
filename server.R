@@ -156,10 +156,10 @@ server <- (function(input, output, session) {
   # Downloadable csv of selected dataset ----
   output$downloadData <- downloadHandler(
     filename = function() {
-      paste(input$spatial_filter, ".csv", sep = "")
+      paste(input$spatial_filter, ".xlsx", sep = "")
     },
     content = function(file) {
-      write.csv(data_sub(), file, row.names = FALSE)
+      write.xlsx(data_sub(), file)
     }
   )
   
