@@ -115,13 +115,18 @@ ui_db <- dashboardPage(
                      tabPanel(title="Table", id="overview_table", div(style="overflow-y: scroll; height: 700px",
                               div(style="font-weight:bold", textOutput("ws_list_1")), 
                               br(),
+                              # Download Table button
+                              downloadButton("downloadData", label = "Download Table"), 
+                              br(),
+                              br(),
                               div(textOutput("score_tables"), style="font-weight:bold"),
                               br(),
                               div(uiOutput("cond_table"), style = "font-size:90%"),
                               tags$head(tags$style("#cond_table td{
                                                    position:relative;
                                                    };"))
-                              )),
+                              ) 
+                             ),
                      
                      tabPanel(title="Watershed-specific", id="ws_info",
                               h5("Click on a watershed to get detailed information"),
