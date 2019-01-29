@@ -61,14 +61,24 @@ ui_db <- dashboardPage(
 
                   box(width=12, status = "warning", 
                       div(style="font-weight:blod; color:orange; text-align:center",
-                          fluidRow(h4("Creek Health Indicator"))),
+                          fluidRow(h4("Explore Biological Scores and their relationship to Stressors"))),
                       column(6,selectInput(inputId="filter_by",
-                              label= NULL,
+                              label= "Biological Health Score (color):",
                               choices= c("CSCI Score" = "csci", 
                                          "ASCI Hybrid Score" = "asci_hyb",
-                                         "ASCI Diatom Score" = "asci_diatom"
+                                         "ASCI Diatom Score" = "asci_diatom",
+                                         "Benthic Algae Score (S2)"="s2",
+                                         "Benthic Algae Score (H20)"="h20",
+                                         "Benthic Algae Score (D18)" = "d18",
+                                         "Total PHAB" = "tot_phab"
                               ),selected = "csci")),
-                  )
+                  column(6,selectizeInput(tags$style(type='text/css', ".selectize-dropdown-content {max-height: 200px; }"),
+                                 inputId="size_by",
+                                 label= "Stressor Variable (size):",
+                                 choices= NULL),
+                         tags$head(tags$style(".leaflet-top {z-index:999!important;}")),
+                         prettyCheckbox(inputId="show_radius", label="Show as marker size?", 
+                                       value=F, shape="round", animation="pulse", fill=F)))
                   ),
               
               # Box for Map
@@ -82,19 +92,11 @@ ui_db <- dashboardPage(
                             column(4,uiOutput("scnd_sub_ws"))),
                   fluidRow(column(12,leafletOutput("map_sites"))),
                   fluidRow(column(3,actionButton("reset_button", "Reset view")),
-                  column(6, prettyCheckbox(inputId="show_radius", label="Show stressor variable as marker size?", 
-                                       value=F, shape="round", animation="pulse", fill=F))))), 
+                  column(6,radioButtons(inputId="show_creeks", label="Show Creeks", 
+                               choices=c("Yes"= "yes", "No"= "no"),selected="no", inline=T))))), 
               
               
               column(6,
-
-              # Choose stressor variable
-                     selectizeInput(tags$style(type='text/css', ".selectize-dropdown-content {max-height: 200px; }"),
-                                 inputId="size_by",
-                                 label= "Stressor Variable (size):",
-                                 choices= NULL),
-                         tags$head(tags$style(".leaflet-top {z-index:999!important;}")),
-                     
               # TabBox for outputs 
               tabBox(id="output_tabs", width=12,
                     
