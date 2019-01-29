@@ -16,6 +16,7 @@
 
 
 # Required libraries 
+library(xlsx)
 library(readxl)
 library(plyr)
 library(tidyverse)
@@ -39,7 +40,7 @@ library(rsconnect)
 ################################################################################################################################################
 ################################################################################################################################################
 # watersheds delineation 
-sheds <- readOGR(".","SBC_Sheds_SCC_Only", GDAL1_integer64_policy = F) %>%
+sheds <- readOGR("./shp/SBC_Sheds_SCC_Only_w_Alameda.shp", GDAL1_integer64_policy = F) %>%
   spTransform(CRS("+init=epsg:4326"))
 
 # creeks 
@@ -59,9 +60,7 @@ sites$watershed <- ifelse(!is.na(sites$watershed) & sites$watershed == "San Thom
 sites$watershed <- ifelse(!is.na(sites$watershed) & sites$watershed == "Matadero Creek", "Matadero/Barron Creeks", sites$watershed)
 sites$watershed <- mapvalues(sites$watershed, from=unique(sites$watershed), to=c(NA,"Alameda","Coyote","Guadalupe", "San Tomas Aquino", "Calabazas", "Stevens", "Lower Penitencia","Matadero/Barron","Adobe","Permanente","San Francisquito"))
 
-sheds <- sheds[!(sheds$SYSTEM %in% c("Coyote and Lower Pen", "Arroyo la Laguna", "Baylands", "Dumbarton South")),] # remove useless ws
 ws_sheds <- unique(sheds$SYSTEM)
-sheds$SYSTEM <- mapvalues(sheds$SYSTEM, from=ws_sheds, to=ws) # change ws names in shapefile to make them the same as in data file 
 
 # Make sure creek names are consistent with sites file 
 # later 
@@ -177,10 +176,11 @@ df_wq <- read_excel("data_master_wq_2012_18.xlsx", sheet= "SC WQ ALL") %>%
   arrange(year)
 
 
-df_temp <-  read_excel("data_master_wq_2012_18.xlsx", sheet= "SC ConTemp") %>% 
+df_temp <-  read_excel("data_master_wq_2012_18.xlsx", sheet= "SC ConTemp", col_types=c("text","text", "date", "text")) %>% 
   mutate(year =year(date)) %>% # make factor or ordered num 
   arrange(year) %>% 
-  mutate(ws = sites_char[match(site_id,sites_char$`Station Number`),"ws"]$ws)
+  mutate(ws = sites_char[match(site_id,sites_char$`Station Number`),"ws"]$ws,
+         ctemp_c =as.numeric(ctemp_c))
 
 
 # data frame with unique site Id's for mapping 

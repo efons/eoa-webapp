@@ -120,7 +120,8 @@ tabItems(
               selected = "whole_county"
             )
           ),
-          column(4, uiOutput("scnd_sub_ws"))
+          column(4, uiOutput("scnd_sub_ws"),
+                 tags$head(tags$style(".leaflet-top {z-index:999!important;}")))
         ),
         fluidRow(column(12, leafletOutput("map_sites"))),
         fluidRow(column(
