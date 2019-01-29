@@ -1,2 +1,2 @@
 # eoa-webapp
-creek data visualization tool 
+Creek Data Visualization Tool 
