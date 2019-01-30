@@ -87,8 +87,7 @@ server <- (function(input, output, session) {
     filter_name <-
       as.character(bio_vars_filter$name[which(bio_vars_filter$param == filter_by)])
     size_by <- input$size_by
-    size_name <-
-      as.character(param_names$fullname[which(param_names$dataname == size_by)])
+    size_name <- as.character(param_names$fullname[which(param_names$dataname == size_by)])
     
     data_sub <-
       df_bio %>% filter(year >= input$wy[1] & year <= input$wy[2]) %>%
@@ -100,12 +99,13 @@ server <- (function(input, output, session) {
       mutate(year = factor(year, levels = seq(
         min(bio_vars_yr), max(bio_vars_yr), 1
       ))) %>%
-      dplyr::select(c("rmc_id", "ws", "creek", "year", filter_by, size_by))  %>%
+      dplyr::select(c("rmc_id", "ws", "subws","creek", "year", filter_by, size_by))  %>%
       arrange(desc(year), ws) %T>%
       {
         names(.) <-
           c("RMC ID",
             "Watershed",
+            "Sub-watershed",
             "Creek",
             "Year",
             filter_name,
@@ -118,63 +118,30 @@ server <- (function(input, output, session) {
     if (nrow(data_sub) > 0) {
       data_sub <- data_sub %>%
         mutate(filter_by_chr = NA) %>% # Makes unknown column'' error appear
-        select(c(1, 2, 3, 4, 5, 7, 6)) %>%
-        rename_at(6, ~ paste(filter_name, " ", sep = ''))
+        select(c(1, 2, 3, 4, 5, 6, 8, 7)) %>%
+        rename_at(7, ~ paste(filter_name, " ", sep = ''))
       
       
       
       for (i in 1:nrow(data_sub)) {
-        if (!is.na(data_sub[i, 5])) {
-          if (data_sub[i, 5] <= threshold1)  {
-            data_sub[i, 6] <-
-              paste(
-                '<div style="width: 100%; height: 100%; z-index: 0; color:',
-                colors_bio[4],
-                '; position:absolute; top: 0; left: 0; padding:5px;"><span>',
-                signif(data_sub[i, 5], 2),
-                '</span></div>'
-              )
+        if (!is.na(data_sub[i, 6])) {
+          if (data_sub[i, 6] <= threshold1)  {
+            data_sub[i, 7] <- colors_bio[4]
           }
           else {
-            if (data_sub[i, 5] < threshold2) {
-              data_sub[i, 6] <-
-                paste(
-                  '<div style="width: 100%; height: 100%; z-index: 0; color: ',
-                  colors_bio[3],
-                  '; position:absolute; top: 0; left: 0; padding:5px;"><span>',
-                  signif(data_sub[i, 5], 2),
-                  '</span></div>'
-                )
+            if (data_sub[i, 6] < threshold2) {
+              data_sub[i, 7] <-colors_bio[3]
             }
             else {
-              if (data_sub[i, 5] < threshold3) {
-                data_sub[i, 6] <-
-                  paste(
-                    '<div style="width: 100%; height: 100%; z-index: 0; color: ',
-                    colors_bio[2],
-                    '; position:absolute; top: 0; left: 0; padding:5px;"><span>',
-                    signif(data_sub[i, 5], 2),
-                    '</span></div>'
-                  )
+              if (data_sub[i, 6] < threshold3) {
+                data_sub[i, 7] <-colors_bio[2]
               }
               else {
                 if (threshold3 >= 0) {
-                  data_sub[i, 6] <-
-                    paste(
-                      '<div style="width: 100%; height: 100%; z-index: 0; color: ',
-                      colors_bio[1],
-                      '; position:absolute; top: 0; left: 0; padding:5px;"><span>',
-                      signif(data_sub[i, 5], 2),
-                      '</span></div>'
-                    )
+                  data_sub[i, 7] <-colors_bio[1]
                 }
                 else  {
-                  data_sub[i, 6] <-
-                    paste(
-                      '<div style="width: 100%; height: 100%; z-index: 0; color: black; position:absolute; top: 0; left: 0; padding:5px;"><span>',
-                      signif(data_sub[i, 5], 2),
-                      '</span></div>'
-                    )
+                  data_sub[i, 7] <- "black"
                 }
                 
               }
@@ -257,7 +224,16 @@ server <- (function(input, output, session) {
   # Create Table when data set not empty
   output$score_table <- renderTable({
     t <- data_sub()
-    return(t[, c(1, 2, 3, 4, 6, 7)])
+    
+    t[,7] <- sapply(rep(1:nrow(t),1), function(x) paste(
+      '<div style="width: 100%; height: 100%; z-index: 0; color:',
+      t[x,7],
+      '; position:absolute; top: 0; left: 0; padding:5px;"><span>',
+      signif(t[x, 6], 2),
+      '</span></div>'
+    ))
+    
+    return(t[, c(1, 2, 3, 4,5, 7,8)])
     
     
   }, bordered = T, align = 'c', hover = T, sanitize.text.function = function(x)
@@ -299,7 +275,6 @@ server <- (function(input, output, session) {
   
   output$cond_scatter <- renderUI({
     if (nrow(data_sub()) <= 1 ||
-        ncol(data_sub()) < 7 ||
         sum(!is.na(data_sub()[, ncol(data_sub())])) <= 1) {
       h5(
         "No data to show: Make sure you selected a stressor variable and there are at least two assessment events for the selected time period/watersheds"
@@ -312,10 +287,10 @@ server <- (function(input, output, session) {
   
   output$scatter1 <- renderPlot({
     data_sub_plots <- as.data.frame(data_sub())
-    x_var <- data_sub_plots[, 7]
-    y_var <- data_sub_plots[, 5]
+    x_var <- data_sub_plots[, 8]
+    y_var <- data_sub_plots[, 6]
     p <- ggplotRegression(lm(y_var ~ x_var)) +
-      xlab(colnames(data_sub_plots)[7]) + ylab(colnames(data_sub_plots)[5])
+      xlab(colnames(data_sub_plots)[8]) + ylab(colnames(data_sub_plots)[6])
     return(p)
   }, height = 300, width = 400)
   
@@ -323,9 +298,9 @@ server <- (function(input, output, session) {
   output$boxplots <- renderText({
     ifelse(
       input$spatial_filter == "sub_ws",
-      paste("Timeseries for ", input$wy[1], " - ", input$wy[2], sep =
+      paste("Boxplots for ", input$wy[1], " - ", input$wy[2], sep =
               ""),
-      paste("Timeseries for ", input$wy[1], " - ", input$wy[2], sep =
+      paste(" Boxplots for ", input$wy[1], " - ", input$wy[2], sep =
               "")
     )
   })
@@ -343,21 +318,24 @@ server <- (function(input, output, session) {
   })
   
   bio_boxplot <- function(data_sub_plots,
-                          var_nb = 7,
+                          var_nb = 8,
                           threshold = -1) {
     if (nrow(data_sub_plots) > 0) {
-      x_var <- data_sub_plots[, 4]
+      x_var <- data_sub_plots[,2]
+      if (length(unique(x_var))==1) {x_var <- data_sub_plots[,3]}
+      
       y_var <- data_sub_plots[, var_nb]
       df_tempo <- data.frame(x_var = x_var, y_var = y_var)
       p <-
         ggplot(df_tempo, aes(x = x_var, y = y_var)) + geom_boxplot(col = rgb(0, 0, 1, 0.6)) +
-        xlab(colnames(data_sub_plots[4])) + ylab(colnames(data_sub_plots[var_nb])) +
+        xlab(colnames(data_sub_plots[2])) + ylab(colnames(data_sub_plots[var_nb])) +
         stat_summary(
           fun.data = give_tot,
           geom = "text",
           fun.y = median,
           position = position_dodge(width = 0.75)
-        )
+        ) + 
+       theme(axis.text.x = element_text(angle = 90, hjust = 1))
       
       if (threshold >= 0) {
         p <-
@@ -374,10 +352,10 @@ server <- (function(input, output, session) {
   output$boxplot <- renderPlot({
     data_sub_plots <- as.data.frame(data_sub())
     threshold <-
-      bio_vars_filter[match(colnames(data_sub_plots[5]), bio_vars_filter$name), "threshold1"]
+      bio_vars_filter[match(colnames(data_sub_plots[6]), bio_vars_filter$name), "threshold1"]
     return(bio_boxplot(
       data_sub_plots = data_sub_plots,
-      var_nb = 5,
+      var_nb = 6,
       threshold = threshold
     ))
   }, height = 300, width = 400)
@@ -386,11 +364,8 @@ server <- (function(input, output, session) {
   
   output$boxplot2 <- renderPlot({
     data_sub_plots <- as.data.frame(data_sub())
-    if (ncol(data_sub_plots) == 7) {
-      return(bio_boxplot(data_sub_plots = data_sub_plots, var_nb = 7))
-    }
-    else
-      return(NULL)
+      return(bio_boxplot(data_sub_plots = data_sub_plots, var_nb = 8))
+    
   }, height = 300, width = 400)
   
   

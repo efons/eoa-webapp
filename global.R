@@ -50,7 +50,7 @@ sheds <- readOGR("./shp/SBC_Sheds_SCC_Only_w_Alameda.shp", GDAL1_integer64_polic
 
 
 # sites info 
-sites <- read_excel("sites master file.xlsx", na=c("", "NA", "#N/A"),sheet="copy_01.28") %>%
+sites <- read_excel("sites master file.xlsx", na=c("", "NA", "#N/A"),sheet="copy_01.29") %>%
   arrange(rmc_id)
 
 
@@ -119,10 +119,14 @@ df_bio <- df_bio %>% filter(year %in% seq(2012,2018,1)) %>% dplyr::select(select
          elevation_m = sites$elevation_m[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
          drain_area_km2 = sites$drain_area_km2[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
          ws = sites$watershed[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
+         subws = sites$subwatershed[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
          creek= sites$creek[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
          pct_imperv_ws=sites$pct_imperv_ws[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
          road_dsty_ws=sites$road_dsty_ws[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)]) %>%
-  mutate(pct_imperv_ws =  pct_imperv_ws * 100)
+  mutate(pct_imperv_ws =  pct_imperv_ws * 100) %>% 
+  mutate(ws = factor(ws, levels=sort(unique(df_bio$ws))))
+
+
 
 # Variables that will be used in ui and server
 bio_vars_yr <- unique(df_bio$year)
@@ -135,8 +139,9 @@ bio_vars_ws <- sort(factor(unique(sheds$SYSTEM), levels=sort(unique(as.character
 
 colors_bio <- c("green", "orange", "red","purple")
 
-
-
+# subwatershed groups list
+subws <- lapply(bio_vars_ws, function(x) (unique(sites[sites$watershed == x & !is.na(sites$watershed), "subwatershed"]))$subwatershed)
+names(subws) <- bio_vars_ws
 
 
 # B - Import and reshape POC data 
