@@ -246,8 +246,8 @@ tabItem(
       selectInput(
         inputId = "wq_ws",
         label = "Watershed:",
-        choices = c(wq_vars_ws),
-        selected = wq_vars_ws[1]
+        choices = as.character(wq_vars_ws),
+        selected = as.character(wq_vars_ws[1])
       )
     ),
     #box for map

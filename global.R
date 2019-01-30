@@ -175,7 +175,9 @@ unique(df_POC$site_id) # /!\ duplicate sites <- fix for point visualization
 # C - Import and reshape continuous water quality data 
 ###########################################################################################################################################
 ###########################################################################################################################################
-sites_char <- read_excel("Cont Temp and WQ stations 2012_2018.xlsx", sheet="ALL")
+sites_char <- read_excel("Cont Temp and WQ stations 2012_2018.xlsx", sheet="ALL") %>% 
+  mutate(ws=factor(ws))
+sites_char$ws <- mapvalues(sites_char$ws, from = unique(sites_char$ws), to=c("Coyote","Guadalupe","San Tomas Aquino","Stevens"))
 
 df_wq <- read_excel("data_master_wq_2012_18.xlsx", sheet= "SC WQ ALL") %>%
   mutate(year = year(date)) %>%
@@ -192,6 +194,7 @@ df_temp <-  read_excel("data_master_wq_2012_18.xlsx", sheet= "SC ConTemp", col_t
 
 
 # data frame with unique site Id's for mapping 
+
 all_sites_wq <- unique(c(unique(df_wq$site_id),unique(df_temp$site_id)))
 
 sites_cWQ <- data.frame(site_id = all_sites_wq,
