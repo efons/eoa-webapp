@@ -260,6 +260,24 @@ server <- (function(input, output, session) {
   
   )
   
+  
+  # Summary barplot 
+  output$barplot <- renderPlot({
+    data_sub <- data_sub()
+    data_sub[,7] <- factor(data_sub[,7], levels=colors_bio)
+    
+    
+    ggplot(data = data_sub, aes(x = data_sub[,2], fill = data_sub[,7])) + geom_bar() +
+      scale_fill_manual(values = colors_bio, name= "Score Category",
+                        breaks=colors_bio,
+                        labels=c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered")) +
+      xlab(colnames(data_sub)[2]) + ylab("Number of samples") + 
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+
+  })
+  
+  
   # Scatter Plots
   
   output$scatterplots <- renderText({

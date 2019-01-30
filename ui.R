@@ -168,6 +168,8 @@ tabItems(
             style = "overflow-y: scroll; height: 700px",
             div(style = "font-weight:bold", textOutput("ws_list_2")),
             br(),
+            plotOutput("barplot"),
+
             div(style = "font-weight:bold", textOutput("scatterplots")),
             
             uiOutput("cond_scatter"),
