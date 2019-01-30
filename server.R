@@ -12,6 +12,11 @@ server <- (function(input, output, session) {
   ## Bioassessment data
   ###################################################################################################################
   
+  
+  # Score description 
+  
+  
+  
   # map parameter : size filter by stressor variable
   observe({
     updateSelectizeInput(
@@ -62,9 +67,9 @@ server <- (function(input, output, session) {
       pickerInput(
         inputId = "ws",
         label = "Choose Watershed",
-        choices = if (input$spatial_filter == "sub_ws") {as.character(bio_vars_ws)} else {""},
-        selected = if (input$spatial_filter == "sub_ws") {as.character(bio_vars_ws)} else {""},
-        options = list(`actions-box` = TRUE, size = 20),
+        choices = if (input$spatial_filter == "sub_ws") {as.character(bio_vars_ws)} else {NULL},
+        selected = if (input$spatial_filter == "sub_ws") {as.character(bio_vars_ws)} else {NULL},
+        options = list(`actions-box` = ifelse((input$spatial_filter == "sub_ws"),TRUE,FALSE), size = 20),
         multiple = T
       )
     

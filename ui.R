@@ -90,7 +90,7 @@ tabItems(
         )
       )),
       
-    fluidRow(
+    
       # Filter inputs
       
       column(3,
@@ -159,35 +159,43 @@ tabItems(
            box(width=12, 
            plotOutput("barplot"),      
            prettyCheckbox(inputId="show_bar_pct", label= "Show as %?")
-           ))),
+           )), 
+    
+    br(), 
     
     
+    
+    div(style = "font-weight:bold; color:black; text-align:center",
+        fluidRow(
+          h4("For a more detailed data analysis of scores and their relationship to stressor variables"), 
+            h4(" in the selected watersheds and monitoring period, scroll down")
+        )),
+    
+    br(),
+    
+    column(10,
+           
     fluidRow(
       
-    
-      
+
       box(width = 12,
           column(
             6,
-            selectizeInput(
+            fluidRow(selectizeInput(
               tags$style(type = 'text/css', ".selectize-dropdown-content {max-height: 200px; }"),
               inputId = "size_by",
               label = "Potential Stressors:",
               choices = NULL
-            ),
-            br(),
-            
-            prettyCheckbox(
+            ), prettyCheckbox(
               inputId = "show_radius",
               label = "Stressors as marker size?",
               value = F,
               shape = "round",
               animation = "pulse",
               fill = F
-            ), 
-            offset = 3
+            )
+            ), offset = 3
           )),
-      
       
       
       # TabBox for outputs
@@ -254,7 +262,7 @@ tabItems(
         
         
           )
-      )
+      ),offset=1)
 ),
 
 
