@@ -58,19 +58,21 @@ server <- (function(input, output, session) {
   
   # Spatial Filter: county vs. watersheds
   output$scnd_sub_ws <- renderUI({
-    if (input$spatial_filter == "sub_ws") {
+   
       pickerInput(
         inputId = "ws",
         label = "Choose Watershed",
-        choices = as.character(bio_vars_ws),
-        selected = as.character(bio_vars_ws),
+        choices = if (input$spatial_filter == "sub_ws") {as.character(bio_vars_ws)} else {""},
+        selected = if (input$spatial_filter == "sub_ws") {as.character(bio_vars_ws)} else {""},
         options = list(`actions-box` = TRUE, size = 20),
         multiple = T
       )
-    }
-    else
-      NULL
+    
+ 
+      
   })
+  
+  
   
   
   # Reactive function that returns the subsetted data table
@@ -240,6 +242,8 @@ server <- (function(input, output, session) {
     x)
   # error: unknown column ""
   
+  
+  
   # Downloadable user selected file type of selected dataset ----
 
   output$downloadData <- downloadHandler(
@@ -271,13 +275,8 @@ server <- (function(input, output, session) {
     n_name <- ifelse(n==2,'Watershed',"Subwatershed")
     
     if (!input$show_bar_pct){
-          p <- ggplot(data = data_sub, aes(x = data_sub[,n], fill = data_sub[,7])) + geom_bar() +
-      scale_fill_manual(values = c("green"='green', 'orange'='orange', 'red'='red', 'purple'='purple'), name= "Score Category",
-                        breaks=colors_bio,
-                        labels=c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered")) +
-      xlab(n_name) + ylab("Number of samples") + 
-      theme(axis.text.x = element_text(angle = 45, hjust = 1))
-    }
+          p <- ggplot(data = data_sub, aes(x = data_sub[,n], fill = data_sub[,7])) + geom_bar()+ ylab("Number of samples")
+          }
     else {
       data_sub <- data_sub %>% 
         dplyr::rename("x_axis"=!!names(.[n]),
@@ -286,14 +285,18 @@ server <- (function(input, output, session) {
         dplyr::group_by(x_axis, score_cat, score) %>% 
         dplyr::summarise(n = n()) 
 
-      p <- ggplot(data = data_sub, aes(x = x_axis, y=n, fill = score_cat)) + geom_bar(position="fill",stat='identity') +
-        scale_fill_manual(values = c("green"='green', 'orange'='orange', 'red'='red', 'purple'='purple'), name= "Score Category",
-                          breaks=colors_bio,
-                          labels=c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered")) +
-        xlab(n_name) + ylab("Percentage of samples") + 
-        scale_y_continuous(labels = percent_format()) + 
-        theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+      p <- ggplot(data = data_sub, aes(x = x_axis, y=n, fill = score_cat)) + geom_bar(position="fill",stat='identity') + ylab("Percentage of samples") +
+        scale_y_continuous(labels = percent_format())
     }
+    
+    p <- p + 
+      scale_fill_manual(values = c("green"='green', 'orange'='orange', 'red'='red', 'purple'='purple'),
+                                breaks=colors_bio,
+                                labels=c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered")) +
+      xlab(n_name) + 
+      theme(axis.text.x = element_text(angle = 45, hjust = 1), 
+            legend.position = "top", legend.box="vertical", legend.title = element_blank()) 
+    
     
     return(p)
 
@@ -364,13 +367,15 @@ server <- (function(input, output, session) {
                           threshold = -1) {
     if (nrow(data_sub_plots) > 0) {
       x_var <- data_sub_plots[,2]
-      if (length(unique(x_var))==1) {x_var <- data_sub_plots[,3]}
+      x_var_name <- "Watersheds"
+      if (length(unique(x_var))==1) {x_var <- data_sub_plots[,3]
+      x_var_name="Subwatersheds"}
       
       y_var <- data_sub_plots[, var_nb]
       df_tempo <- data.frame(x_var = x_var, y_var = y_var)
       p <-
         ggplot(df_tempo, aes(x = x_var, y = y_var)) + geom_boxplot(col = rgb(0, 0, 1, 0.6)) +
-        xlab(colnames(data_sub_plots[2])) + ylab(colnames(data_sub_plots[var_nb])) +
+        xlab(x_var_name) + ylab(colnames(data_sub_plots[var_nb])) +
         stat_summary(
           fun.data = give_tot,
           geom = "text",

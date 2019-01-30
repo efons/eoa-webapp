@@ -65,13 +65,12 @@ tabItems(
     tabName = "bio_data",
     h2("Biological Condition Assessment"),
     
-    column(
-      6,
-      # Box for inputs
+   
+      # Box for score choice
       fluidRow(box(
         width = 12,
         status = "warning",
-        div(style = "font-weight:blod; color:orange; text-align:center",
+        div(style = "font-weight:bold; color:orange; text-align:center",
             fluidRow(
               h4("Explore Creek Health Scores in the Santa Clara Basin")
             )),
@@ -91,59 +90,81 @@ tabItems(
         )
       )),
       
-      # Box for Map
-      box(
+    fluidRow(
+      # Filter inputs
+      
+      column(3,
+             box(width=12, height=450,
+                 
+                 
+                       h4("Data Filters:")
+                     ,
+                 
+                     sliderInput(
+                       inputId = "wy",
+                       label = "Years:",
+                       ticks = T,
+                       min = min(bio_vars_yr),
+                       max = max(bio_vars_yr),
+                       value = c(min(bio_vars_yr), max(bio_vars_yr)),
+                       sep = ""
+                   ),
+                 
+                  
+                     selectInput(
+                       inputId = "spatial_filter",
+                       label = "Spatial Scale:",
+                       choices = c(
+                         "All of Santa Clara Basin" = "whole_county",
+                         "Watershed-level" = "sub_ws"
+                       ),
+                       selected = "whole_county"
+                   ),
+                  
+                   uiOutput("scnd_sub_ws"),
+                          tags$head(tags$style(".leaflet-top {z-index:999!important;}")),
+                 
+              
+                
+                 br(),
+                 
+                 
+                       h4("Data Download:"),
+                     
+ 
+                     
+                     # Download Table button
+                 downloadButton("downloadData", label = "Download Data"),
+                     # Input: Choose file type ----
+                radioButtons("file_type", NULL, inline = T,
+                                  choices = c(".csv", ".xlsx"))
+                  
+                     
+                )
+             ),
+      
+      # MAP
+      
+      column(4,box(
         width = NULL,
         status = 'primary',
-        fluidRow(
-          column(
-            4,
-            sliderInput(
-              inputId = "wy",
-              label = NULL,
-              ticks = T,
-              min = min(bio_vars_yr),
-              max = max(bio_vars_yr),
-              value = c(min(bio_vars_yr), max(bio_vars_yr)),
-              sep = ""
-            )
-          ),
-          column(
-            4,
-            selectInput(
-              inputId = "spatial_filter",
-              label = "Spatial Scale:",
-              choices = c(
-                "All of Santa Clara Basin" = "whole_county",
-                "Watershed-level" = "sub_ws"
-              ),
-              selected = "whole_county"
-            )
-          ),
-          column(4, uiOutput("scnd_sub_ws"),
-                 tags$head(tags$style(".leaflet-top {z-index:999!important;}")))
-        ),
         fluidRow(column(12, leafletOutput("map_sites"))),
         fluidRow(column(
           3, actionButton("reset_button", "Reset view")
-        ),
-        column(
-          6,
-          prettyCheckbox(
-            inputId = "show_radius",
-            label = "Show Stressors as marker size?",
-            value = F,
-            shape = "round",
-            animation = "pulse",
-            fill = F
-          )
-        ))
-      )
-    ),
+        )
+        )
+    )),
+    
+    column(5,
+           box(width=12, 
+           plotOutput("barplot"),      
+           prettyCheckbox(inputId="show_bar_pct", label= "Show as %?")
+           ))),
     
     
-    column(
-      6,
+    fluidRow(
+      
+    
       
       box(width = 12,
           column(
@@ -154,8 +175,21 @@ tabItems(
               label = "Potential Stressors:",
               choices = NULL
             ),
+            br(),
+            
+            prettyCheckbox(
+              inputId = "show_radius",
+              label = "Stressors as marker size?",
+              value = F,
+              shape = "round",
+              animation = "pulse",
+              fill = F
+            ), 
             offset = 3
           )),
+      
+      
+      
       # TabBox for outputs
       tabBox(
         id = "output_tabs",
@@ -168,9 +202,6 @@ tabItems(
             style = "overflow-y: scroll; height: 700px",
             div(style = "font-weight:bold", textOutput("ws_list_2")),
             br(),           
-
-            plotOutput("barplot"),      
-            prettyCheckbox(inputId="show_bar_pct", label= "Show as %?"),
 
 
             div(style = "font-weight:bold", textOutput("scatterplots")),
@@ -217,13 +248,8 @@ tabItems(
         tabPanel(
           title = "Data Download",
           id = "dwnload",
-          h5("Filter data and download various file types below."),
-          # Download Table button
-          downloadButton("downloadData", label = "Download Table"),
-          # Input: Choose file type ----
-          radioButtons("file_type", NULL, inline = T,
-                       choices = c(".csv", ".xlsx")),
-          br()
+          h5("Filter data and download various file types below.")
+          
         )
         
         

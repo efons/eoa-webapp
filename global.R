@@ -34,6 +34,7 @@ library(scales)
 library(latex2exp)
 library(beanplot)
 library(rsconnect)
+library(shinyjs)
 
 
 
@@ -81,7 +82,7 @@ ws_sheds <- unique(sheds$SYSTEM)
 # upload data
 
 # data 
-df_bio <- read_excel("data_master_bio_2012_18.xlsx", sheet="All",na=c("","NR", "Not Recorded", "NA"))
+df_bio <- read_excel("data_master_bio_2012_18.xlsx", sheet="All",na=c("","NR", "Not Recorded", "NA", "-"))
 
 
 # select data fields to be plotted and rename
@@ -113,8 +114,7 @@ param_names <- data.frame(fullname=c("Watershed","Creek",full_names,"Percent Imp
 # subset bioassessment data
 df_bio <- df_bio %>% filter(year %in% seq(2012,2018,1)) %>% dplyr::select(select_param) %>%
   arrange(rmc_id) %>%
-  mutate(chloro_a_mg_m2 = as.numeric(chloro_a_mg_m2),
-         epifaun_substr=as.numeric(epifaun_substr),
+  mutate( epifaun_substr=as.numeric(epifaun_substr),
          sed_deposition = as.numeric(sed_deposition)) %>% 
   mutate(lat = sites$lat[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
          long = sites$long[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
@@ -223,7 +223,7 @@ wq_GUA_1 <- factor(c('205GUA202', '205GUA205', '205GUA210', '205GUA213', '205GUA
 wq_GUA_2 <- factor(c('205GUA190', '205GUA250','205GUA255','205GUA262', '205GUA225', '205GUA340', '205GUA270', '205GUA279'))
 wq_STA <- factor(c('205SAR050', '205SAR060', '205SAR070', '205SAR075', '205SAR085'))
 wq_STE <- factor(c('205STE064','205STE065', '205STE070', '205STE071', '205STE095', '205STE105'))
-wq_COY_1 <- sites_cWQ[sites_cWQ$ws=="Coyote Creek","site_id"]
+wq_COY_1 <- sites_cWQ[sites_cWQ$ws=="Coyote","site_id"]
 wq_COY_2 <- factor(wq_COY_1[c(3,2,8,4,1)])
 wq_COY_1 <- factor(wq_COY_1[c(9,6,5,7,10,14,11,12,15,13)])
 
