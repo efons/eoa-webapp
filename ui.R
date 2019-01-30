@@ -190,12 +190,6 @@ tabItems(
             style = "overflow-y: scroll; height: 700px",
             div(style = "font-weight:bold", textOutput("ws_list_1")),
             br(),
-            # Download Table button
-            downloadButton("downloadData", label = "Download Table"),
-            # Input: Choose file type ----
-            radioButtons("file_type", NULL, inline = T,
-                         choices = c(".csv", ".xlsx")),
-            br(),
             div(textOutput("score_tables"), style = "font-weight:bold"),
             br(),
             div(uiOutput("cond_table"), style = "font-size:90%"),
@@ -218,7 +212,20 @@ tabItems(
           h5("Click on a site on the map to visualize site-specific information"),
           textOutput("site_info"),
           tableOutput("table_site_onClick")
+        ),
+        
+        tabPanel(
+          title = "Data Download",
+          id = "dwnload",
+          h5("Filter data and download various file types below."),
+          # Download Table button
+          downloadButton("downloadData", label = "Download Table"),
+          # Input: Choose file type ----
+          radioButtons("file_type", NULL, inline = T,
+                       choices = c(".csv", ".xlsx")),
+          br()
         )
+        
         
           )
       )
