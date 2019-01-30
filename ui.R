@@ -44,7 +44,7 @@ ui_db <- dashboardPage(
   
   
   # Body of the webpage
-  dashboardBody( tags$head(tags$link(rel = "shortcut icon", href = "fin.ico")),
+  dashboardBody(
     tags$head(tags$style(
       HTML('.content-wrapper {
            overflow-y:scroll
@@ -120,7 +120,8 @@ tabItems(
               selected = "whole_county"
             )
           ),
-          column(4, uiOutput("scnd_sub_ws"))
+          column(4, uiOutput("scnd_sub_ws"),
+                 tags$head(tags$style(".leaflet-top {z-index:999!important;}")))
         ),
         fluidRow(column(12, leafletOutput("map_sites"))),
         fluidRow(column(
@@ -166,7 +167,12 @@ tabItems(
           div(
             style = "overflow-y: scroll; height: 700px",
             div(style = "font-weight:bold", textOutput("ws_list_2")),
-            br(),
+            br(),           
+
+            plotOutput("barplot"),      
+            prettyCheckbox(inputId="show_bar_pct", label= "Show as %?"),
+
+
             div(style = "font-weight:bold", textOutput("scatterplots")),
             
             uiOutput("cond_scatter"),
@@ -183,6 +189,12 @@ tabItems(
           div(
             style = "overflow-y: scroll; height: 700px",
             div(style = "font-weight:bold", textOutput("ws_list_1")),
+            br(),
+            # Download Table button
+            downloadButton("downloadData", label = "Download Table"),
+            # Input: Choose file type ----
+            radioButtons("file_type", NULL, inline = T,
+                         choices = c(".csv", ".xlsx")),
             br(),
             div(textOutput("score_tables"), style = "font-weight:bold"),
             br(),
@@ -206,20 +218,7 @@ tabItems(
           h5("Click on a site on the map to visualize site-specific information"),
           textOutput("site_info"),
           tableOutput("table_site_onClick")
-        ),
-        
-        tabPanel(
-          title = "Data Download",
-          id = "dwnload",
-          h5("Filter data and download various file types below."),
-          # Download Table button
-          downloadButton("downloadData", label = "Download Table"),
-          # Input: Choose file type ----
-          radioButtons("file_type", NULL, inline = T,
-                       choices = c(".csv", ".xlsx")),
-          br()
         )
-        
         
           )
       )
