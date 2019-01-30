@@ -9,6 +9,8 @@
 
 # set wd
 # setwd("F:/SCVURPPP (SC)/SC94 (2018-19)/Website Re-design/R code for webapp")
+# setwd("C:/Users/efons/eoa-webapp")
+
 
 #publish app 
 #rsconnect::setAccountInfo(name='scvurppp',token= 'B910374A8BB4335B26ECEEBB507FBD59',secret = 'GnPUQAibzBmyN2bS0qbHqxHmp/bt1CCtHOZaSfpw')

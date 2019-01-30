@@ -167,8 +167,11 @@ tabItems(
           div(
             style = "overflow-y: scroll; height: 700px",
             div(style = "font-weight:bold", textOutput("ws_list_2")),
-            br(),
-            plotOutput("barplot"),
+            br(),           
+
+            plotOutput("barplot"),      
+            prettyCheckbox(inputId="show_bar_pct", label= "Show as %?"),
+
 
             div(style = "font-weight:bold", textOutput("scatterplots")),
             

@@ -266,13 +266,37 @@ server <- (function(input, output, session) {
     data_sub <- data_sub()
     data_sub[,7] <- factor(data_sub[,7], levels=colors_bio)
     
+    n=2
+    if (length(unique(data_sub[,2]))==1){n <- 3}
+    n_name <- ifelse(n==2,'Watershed',"Subwatershed")
     
-    ggplot(data = data_sub, aes(x = data_sub[,2], fill = data_sub[,7])) + geom_bar() +
-      scale_fill_manual(values = colors_bio, name= "Score Category",
+    if (!input$show_bar_pct){
+          p <- ggplot(data = data_sub, aes(x = data_sub[,n], fill = data_sub[,7])) + geom_bar() +
+      scale_fill_manual(values = c("green"='green', 'orange'='orange', 'red'='red', 'purple'='purple'), name= "Score Category",
                         breaks=colors_bio,
                         labels=c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered")) +
-      xlab(colnames(data_sub)[2]) + ylab("Number of samples") + 
+      xlab(n_name) + ylab("Number of samples") + 
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    }
+    else {
+      data_sub <- data_sub %>% 
+        dplyr::rename("x_axis"=!!names(.[n]),
+              "score" = !!names(.[6]),
+               "score_cat" = !!names(.[7])) %>% 
+        dplyr::group_by(x_axis, score_cat, score) %>% 
+        dplyr::summarise(n = n()) 
+
+      p <- ggplot(data = data_sub, aes(x = x_axis, y=n, fill = score_cat)) + geom_bar(position="fill",stat='identity') +
+        scale_fill_manual(values = c("green"='green', 'orange'='orange', 'red'='red', 'purple'='purple'), name= "Score Category",
+                          breaks=colors_bio,
+                          labels=c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered")) +
+        xlab(n_name) + ylab("Percentage of samples") + 
+        scale_y_continuous(labels = percent_format()) + 
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+    }
+    
+    return(p)
+
   
 
   })
