@@ -126,7 +126,8 @@ df_bio <- df_bio %>% filter(year %in% seq(2012,2018,1)) %>% dplyr::select(select
          pct_imperv_ws=sites$pct_imperv_ws[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
          road_dsty_ws=sites$road_dsty_ws[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)]) %>%
   mutate(pct_imperv_ws =  pct_imperv_ws * 100) %>% 
-  mutate(ws = factor(ws, levels=sort(unique(df_bio$ws))))
+  mutate(ws = factor(ws, levels=sort(unique(ws))),
+         subws = factor(subws, levels=sort(unique(subws))))
 
 
 
