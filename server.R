@@ -14,52 +14,36 @@ server <- (function(input, output, session) {
   
   
   # Score description 
-  
+
+    output$score_desc <- DT::renderDataTable({
+      df <- bio_vars_filter %>% dplyr::filter(param == input$filter_by) %>% 
+        dplyr::select(seq(3,6)) %T>% 
+        {names(.) <- c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered")} %>% t()
+      
+      df[1,] <- paste(df[1,], " - ", df[2,])
+      df[2,] <- paste(df[2,], " - ", df[3,])
+      df[3,] <- paste(df[3,], " - ", df[4,])
+      df[4,] <- paste(" > ", df[4,])
+      
+      
+      
+      
+      col=c(1,2,3,4)
+      name <- as.character(bio_vars_filter[bio_vars_filter$param == input$filter_by,'name'])
+      df <- data.frame(df, colors=col) 
+      colnames(df) <-c(name,"colors")
+      
+      
+      df <- df %>% datatable(options = list(autoWidth=F,columnDefs = list(list(targets=2, visible=F)), dom='t', bSort=F)) %>% 
+        formatStyle(1,2,backgroundColor=styleEqual(col,colors_bio[col]), color=styleEqual(col,c(rep("black",3),"white")))
+
+      return(df)
+  })
   
   
   # map parameter : size filter by stressor variable
-  observe({
-    updateSelectizeInput(
-      session,
-      'size_by',
-      choices = list(
-        "Habitat" = c(
-          "Total PHAB" = "tot_phab",
-          "Epifaunal Substrate" =
-            "epifaun_substr",
-          "Sediment Deposition" = "sed_deposition",
-          "Shannon Diversity (Natural Substrates)" = "shannon_nst",
-          "% Substrate Smaller than Sand (<2 mm)" = "pct_smaller_sand",
-          "Percent Boulders - large & small" = "pct_boulder_ls",
-          "Percent Fast Water of Reach" =
-            "pct_fast_water",
-          "IPI Score" = "ipi",
-          "% Impervious Area - Watershed" =
-            "pct_imperv_ws",
-          "Road density - Watershed" = "road_dsty_ws"
-        ),
-        "Biomass" = c(
-          "Chlorophyll a (mg/m2)" = "chloro_a_mg_m2",
-          "AFDM (g/m2)" = "afdm_g_m2",
-          "% Macroalgae Cover" = "pct_macroalg_cvr"
-        ),
-        "Nutrients" = c(
-          "Total Nitrogen (mg/L)" = "tn_mg_l",
-          "Total Phosphorus(mg/L)" = "tp_mg_l",
-          "Unionized Ammonia (ug/L)" = "uia_ug_l"
-        ),
-        "Water Quality" = c(
-          "Temperature (C)" = "temp_c",
-          "Dissolved Oxygen" =
-            "do_mg_l",
-          "Conductivity (uS/cm)" = "sp_cond_us_cm"
-        ),
-        "Other" = c("Human Disturbance Index (HDI)" = "crhdi_swamp")
-      )
-      ,
-      selected = 'tot_phab'
-    )
-  })
+ 
+  
   
   # Spatial Filter: county vs. watersheds
   output$scnd_sub_ws <- renderUI({
@@ -296,7 +280,7 @@ server <- (function(input, output, session) {
     
     
     p <- p + 
-      scale_fill_manual(values=c( "#B9E0A5"=colors_bio[1], "#FFFFA5"=colors_bio[2], "#FF9191"=colors_bio[3], "#F6A5E1"=colors_bio[4]),
+      scale_fill_manual(values=c( "#A6DBA0"=colors_bio[1], "#FEEBA0"=colors_bio[2], "#FF6D46"=colors_bio[3], "#762A83"=colors_bio[4]),
                                 breaks=colors_bio,
                                 labels=c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered")) +
       xlab(n_name) + 
@@ -307,7 +291,6 @@ server <- (function(input, output, session) {
     return(p)
 
   
-
   })
   
   

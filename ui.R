@@ -17,6 +17,8 @@ ui_db <- dashboardPage(
   
   # Sidebar with different types of monitoring data
   dashboardSidebar(
+    
+    
     width = 200,
     sidebarMenu(
       id = "menu_items",
@@ -48,8 +50,12 @@ ui_db <- dashboardPage(
     tags$head(tags$style(
       HTML('.content-wrapper {
            overflow-y:scroll
-           }')
+           }
+            .box {margin:10px}
+            .#tabBox { height:450px;margin:2px; padding=0px}
+           ')
 )),
+
 
 
 tabItems(
@@ -64,36 +70,42 @@ tabItems(
   tabItem(
     tabName = "bio_data",
     h2("Biological Condition Assessment"),
-    
-   
+    h4("Start by selecting an indicator of creek health. Each indicator is computed based on the diversity and number of individuals for a specific aquatic species: benthic macrovertebrates, algae, etc. Environmental stress might affect the survival of these species. Therefore, these biological measures are a good indicator of creek health."),
+
       # Box for score choice
-      fluidRow(box(
+      box(
         width = 12,
         status = "warning",
         div(style = "font-weight:bold; color:orange; text-align:center",
             fluidRow(
-              h4("Explore Creek Health Scores in the Santa Clara Basin")
+              h4(" Explore Creek Health Scores in the Santa Clara Basin")
             )),
-        column(
-          6,
-          selectInput(
+  
+        
+        fluidRow(
+        column(6,
+          pickerInput(
             inputId = "filter_by",
             label = NULL,
-            choices = c(
-              "Creek Health Score (CSCI)" = "csci",
-              "Algae Health Score (ASCI Hybrid)" = "asci_hyb",
-              "Algae Health Score (ASCI Diatom)" = "asci_diatom"
-            ),
-            selected = "csci"
+            choices = 
+              list("California Stream Condition Index (CSCI)"=c('Indicator: Benthic Macroinvertebrate'="csci"),
+                   "Algae Stream Condition Indices (ASCIs)"=c("Indicator: Soft Algae"="asci_soft_alg",
+                                                      "Indicator: Diatoms" = "asci_diatom",
+                                                      "Indicator: Diatoms-Soft Algae (Hybrid)" = "asci_hyb"
+                                                      )
+                   ),
+            selected = "csci",
+            multiple=F
           ),
-          offset = 3
+          offset=3
         )
+    
       )),
-      
+    
     
       # Filter inputs
-      
-      column(3,
+      fluidRow(
+        column(3,
              box(width=12,
                  
                  
@@ -134,7 +146,8 @@ tabItems(
  
                      
                      # Download Table button
-                 downloadButton("downloadData", label = "Download Data"),
+                 
+                 downloadButton("downloadData", label = "Data"),
                      # Input: Choose file type ----
                 radioButtons("file_type", NULL, inline = T,
                                   choices = c(".csv", ".xlsx"))
@@ -145,64 +158,96 @@ tabItems(
       
       # MAP
       
-      column(4,box(
-        width = NULL,
-        status = 'primary',
+      column(9,
+      tabBox(id="summary_bio",
+        width = 12,
+       
+      
+       tabPanel(title="Map",
         fluidRow(column(12, leafletOutput("map_sites"))),
         fluidRow(column(
           3, actionButton("reset_button", "Reset view")
-        )
-        )
-    )),
-    
-    column(5,
-           box(width=12, 
-           plotOutput("barplot"),      
-           prettyCheckbox(inputId="show_bar_pct", label= "Show as %?")
-           )), 
-    
-    br(), 
-    
-    
-    
-    div(style = "font-weight:bold; color:black; text-align:center",
-        fluidRow(
-          h4("For a more detailed data analysis of scores and their relationship to stressor variables"), 
-            h4(" in the selected watersheds and monitoring period, scroll down")
-        )),
+       ), column(9,
+                 prettyCheckbox(
+                   inputId = "show_radius",
+                   label = "Stressors as marker size?",
+                   value = F,
+                   shape = "round",
+                   animation = "pulse",
+                   fill = F
+                 )))), 
+       tabPanel(title='Plot',
+                plotOutput("barplot"),      
+                prettyCheckbox(inputId="show_bar_pct", label= "Show as %?")
+       ),
+       tabPanel(title="Score categories",
+                dataTableOutput("score_desc"))
+        
+        ),tags$head(tags$style(
+          HTML('
+               .#tabBox {height:450px;margin:2px; padding=0px}
+               '))))),
     
     br(),
+    br(), 
     
-    column(10,
-           
     fluidRow(
+    column(8,
+           
       
 
       box(width = 12,
-          column(
-            6,
-            fluidRow(selectizeInput(
-              tags$style(type = 'text/css', ".selectize-dropdown-content {max-height: 200px; }"),
-              inputId = "size_by",
-              label = "Potential Stressors:",
-              choices = NULL
-            ), prettyCheckbox(
-              inputId = "show_radius",
-              label = "Stressors as marker size?",
-              value = F,
-              shape = "round",
-              animation = "pulse",
-              fill = F
-            )
-            ), offset = 3
-          )),
+          
+        
+              pickerInput(inputId = "size_by",
+                          label = "Explore the relationship with potential Stressors:",
+                          choices = list(
+                            "Habitat" = c(
+                              "Total PHAB" = "tot_phab",
+                              "Epifaunal Substrate" =
+                                "epifaun_substr",
+                              "Sediment Deposition" = "sed_deposition",
+                              "Shannon Diversity (Natural Substrates)" = "shannon_nst",
+                              "% Substrate Smaller than Sand (<2 mm)" = "pct_smaller_sand",
+                              "Percent Boulders - large & small" = "pct_boulder_ls",
+                              "Percent Fast Water of Reach" =
+                                "pct_fast_water",
+                              "IPI Score" = "ipi",
+                              "% Impervious Area - Watershed" =
+                                "pct_imperv_ws",
+                              "Road density - Watershed" = "road_dsty_ws"
+                            ),
+                            "Biomass" = c(
+                              "Chlorophyll a (mg/m2)" = "chloro_a_mg_m2",
+                              "AFDM (g/m2)" = "afdm_g_m2",
+                              "% Macroalgae Cover" = "pct_macroalg_cvr"
+                            ),
+                            "Nutrients" = c(
+                              "Total Nitrogen (mg/L)" = "tn_mg_l",
+                              "Total Phosphorus(mg/L)" = "tp_mg_l",
+                              "Unionized Ammonia (ug/L)" = "uia_ug_l"
+                            ),
+                            "Water Quality" = c(
+                              "Temperature (C)" = "temp_c",
+                              "Dissolved Oxygen" =
+                                "do_mg_l",
+                              "Conductivity (uS/cm)" = "sp_cond_us_cm"
+                            ),
+                            "Other" = c("Human Disturbance Index (HDI)" = "crhdi_swamp")
+                          )
+                          ,
+                          selected = 'tot_phab',
+                          options = pickerOptions(actionsBox = F, liveSearch = T),
+                          multiple = F)
+            
+          ),
       
       
       # TabBox for outputs
       tabBox(
         id = "output_tabs",
         width = 12,
-        
+
         tabPanel(
           title = "Plots",
           id = "overview_plots",
@@ -262,8 +307,8 @@ tabItems(
         
         
           )
-      ),offset=1)
-),
+      , offset=2)))
+,
 
 
 
@@ -278,7 +323,7 @@ tabItem(
       width = 4,
       sliderInput(
         inputId = "wq_dates",
-        label = "From... to...:",
+        label = NULL,
         min = wq_vars_date[1],
         max = wq_vars_date[2],
         value = wq_vars_date,

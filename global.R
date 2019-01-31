@@ -34,8 +34,7 @@ library(scales)
 library(latex2exp)
 library(beanplot)
 library(rsconnect)
-library(shinyjs)
-
+library(DT)
 
 
 
@@ -89,7 +88,7 @@ df_bio <- read_excel("data_master_bio_2012_18.xlsx", sheet="All",na=c("","NR", "
 old_param_names <- c("Elevation (m)", "BMI Taxa", "Diatom Taxa", "CSCI","D18", "ASCI Hybrid", "ASCI diatoms", "Shannon Diversity (H) of Natural Substrate Types",'Percent Substrate Smaller than Sand (<2 mm)',"Percent Impervious", "Road Density Watershed", "Total N", "Chlorophyll a (mg/m2)", '% Macroalgae Cover', "Mean Filamentous Algae Cover", "IPI Score", "Epifaunal Substrate", "Sediment Deposition", "Channel Alteration", "Total PHAB")
 
 select_param <- c("rmc_id","wb_id","year","sample_date", 
-                  "bmi_taxa", "diatom_taxa", "csci", "d18", "h20", "s2","asci_hyb","asci_diatom",
+                  "bmi_taxa", "diatom_taxa", "csci", "d18", "h20", "s2","asci_hyb","asci_diatom", "asci_soft_alg",
                   "do_mg_l","ph","alkalinity_mg_l", "sp_cond_us_cm", "temp_c", # water quality
                   "tn_mg_l", "tp_mg_l", "uia_ug_l", # Nutrients 
                   "chloro_a_mg_m2", 'pct_macroalg_cvr', "filam_alg_cvr", "afdm_g_m2",# biomass indicators 
@@ -99,7 +98,7 @@ select_param <- c("rmc_id","wb_id","year","sample_date",
                   "crhdi_swamp") 
 
 full_names <- c("RMC Station ID","Water Board ID", "Water Year", "Sample Date",
-                "Total BMI Taxa", "Total Diatom Taxa", "CSCI Score",'D18 IBI Score',"S2 IBI Score","H20 IBI Score","ASCI Hybrid Score", "ASCI Diatom Score",
+                "Total BMI Taxa", "Total Diatom Taxa", "CSCI Score",'D18 IBI Score',"S2 IBI Score","H20 IBI Score","ASCI Hybrid Score", "ASCI Diatom Score", "ASCI Soft Algae"
                 "Dissolved Oxygen (mg/L)", "pH", "Alkalinity (as CaCO3, mg/L)", "Conductivity (uS/cm)", "Temperature (C)",
                 "Total Nitrogen (mg/L)", "Total Phosphorus (mg/L)", "Unionized Ammonia (ug/L)",
                 "Chlorophyll a (mg/m2)", '% Macroalgae Cover', "Mean Filamentous Algae Cover (%)", "AFDM (g/m2)",
@@ -133,17 +132,18 @@ df_bio <- df_bio %>% filter(year %in% seq(2012,2018,1)) %>% dplyr::select(select
 
 # Variables that will be used in ui and server
 bio_vars_yr <- unique(df_bio$year)
-bio_vars_filter <- data.frame(param=c("csci", "asci_hyb", "asci_diatom", 's2',"d18", 'h20',"tot_phab"),
-                          name= c("CSCI Score", "ASCI Hybrid Score", "ASCI Diatom Score","S2 Benthic Algae Score", "D18 Benthic Algae Score","H20 Benthic Algae Score", "Total PHAB"),
-                          threshold1=c(0.63, -1, -1,29, 49,54, 15),
-                          threshold2=c(0.795, -1, -1, 47, 62, 63, 30),
-                          threshold3=c(0.92,-1, -1,60,72,70,46)) # NB: set threshold to -1 when no threshold 
+bio_vars_filter <- data.frame(param=c("csci", "asci_hyb", "asci_diatom", "asci_soft_alg", 's2',"d18", 'h20',"tot_phab"),
+                          name= c("CSCI Score", "ASCI Hybrid Score", "ASCI Diatom Score", "ASCI Soft Algae","S2 Benthic Algae Score", "D18 Benthic Algae Score","H20 Benthic Algae Score", "Total PHAB"),
+                          threshold0=rep(0,8),
+                          threshold1=c(0.63, 0.7, 0.63, 0.68, 29, 49,54, 15),
+                          threshold2=c(0.79, 0.83, 0.8, 0.82, 47, 62, 63, 30),
+                          threshold3=c(0.92, 0.93, 0.92, 0.93, 60,72, 70, 46)) # NB: set threshold to -1 when no threshold 
 bio_vars_ws <- sort(factor(unique(sheds$SYSTEM), levels=sort(unique(as.character(sheds$SYSTEM)))))
 
-colors_bio <- c(rgb(185,224,165,maxColorValue = 255), 
-                rgb(255,255,165,maxColorValue = 255), 
-                rgb(255,145,145,maxColorValue = 255),
-                rgb(246,165,225,maxColorValue = 255))
+colors_bio <- c(rgb(166,219,160,maxColorValue = 255), 
+                rgb(254,235,160,maxColorValue = 255), 
+                rgb(255,109,70,maxColorValue = 255),
+                rgb(118,42,131,maxColorValue = 255))
 
 # subwatershed groups list
 subws <- lapply(bio_vars_ws, function(x) (unique(sites[sites$watershed == x & !is.na(sites$watershed), "subwatershed"]))$subwatershed)
