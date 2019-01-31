@@ -98,7 +98,7 @@ select_param <- c("rmc_id","wb_id","year","sample_date",
                   "crhdi_swamp") 
 
 full_names <- c("RMC Station ID","Water Board ID", "Water Year", "Sample Date",
-                "Total BMI Taxa", "Total Diatom Taxa", "CSCI Score",'D18 IBI Score',"S2 IBI Score","H20 IBI Score","ASCI Hybrid Score", "ASCI Diatom Score", "ASCI Soft Algae"
+                "Total BMI Taxa", "Total Diatom Taxa", "CSCI Score",'D18 IBI Score',"S2 IBI Score","H20 IBI Score","ASCI Hybrid Score", "ASCI Diatom Score", "ASCI Soft Algae",
                 "Dissolved Oxygen (mg/L)", "pH", "Alkalinity (as CaCO3, mg/L)", "Conductivity (uS/cm)", "Temperature (C)",
                 "Total Nitrogen (mg/L)", "Total Phosphorus (mg/L)", "Unionized Ammonia (ug/L)",
                 "Chlorophyll a (mg/m2)", '% Macroalgae Cover', "Mean Filamentous Algae Cover (%)", "AFDM (g/m2)",
