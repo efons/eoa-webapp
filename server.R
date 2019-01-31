@@ -294,8 +294,9 @@ server <- (function(input, output, session) {
         scale_y_continuous(labels = percent_format())
     }
     
+    
     p <- p + 
-      scale_fill_manual(values = c("green"='green', 'orange'='orange', 'red'='red', 'purple'='purple'),
+      scale_fill_manual(values=c( "#B9E0A5"=colors_bio[1], "#FFFFA5"=colors_bio[2], "#FF9191"=colors_bio[3], "#F6A5E1"=colors_bio[4]),
                                 breaks=colors_bio,
                                 labels=c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered")) +
       xlab(n_name) + 
@@ -521,10 +522,10 @@ server <- (function(input, output, session) {
         if ((!size_by == "none") & (!sum(!is.na(data_sub$size)) == 0)) {
           rad <- 3 + 7 * (data_sub$size / max(data_sub$size, na.rm = T))
         } else {
-          rad <- 3
+          rad <- 4
         }
       }      else {
-        rad <- 3
+        rad <- 4
       }
       
       
@@ -580,7 +581,7 @@ server <- (function(input, output, session) {
           lat = data_sub$lat,
           radius = getRadius(),
           weight = 1,
-          opacity = 0.6,
+          opacity = 0.9,
           popup = content,
           fill = T,
           fillColor = getColor(),
@@ -811,6 +812,9 @@ server <- (function(input, output, session) {
   observe({
     req(input$menu_items == "con_wq")
     
+  # get dates
+    filter_dates <- as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month"))
+    
     popup <- paste(
       sep = "<br/>",
       "<b>Site:</b>",
@@ -829,7 +833,8 @@ server <- (function(input, output, session) {
           threshold <-
             temp_thresholds[temp_thresholds$param == "avDayTemp", "thresh"]
           df_sub <- df_temp_7DAVG %>%
-            filter(year >= input$wq_yr[1] & year <= input$wq_yr[2])
+            dplyr::filter(as.Date(date) - as.Date(filter_dates[1])>= 0 & 
+                            as.Date(date) - as.Date(filter_dates[2])<= 0)
           
           exc_ratio <- sapply(sites_cWQ$site_id,
                               function(x)
@@ -843,7 +848,8 @@ server <- (function(input, output, session) {
             temp_thresholds[temp_thresholds$param == "avWeek", "thresh"]
           
           df_sub <- df_temp_MWAT %>%
-            filter(year >= input$wq_yr[1] & year <= input$wq_yr[2])
+            filter(as.Date(day1week) - as.Date(filter_dates[1])>= 0 & 
+                     as.Date(day1week) - as.Date(filter_dates[2])<= 0)
           
           exc_ratio <- sapply(sites_cWQ$site_id,
                               function(x)
@@ -931,13 +937,7 @@ server <- (function(input, output, session) {
   
   time_plot_function <- function(data_sub_temp, param) {
     if (nrow(data_sub_temp) > 0) {
-      x_lims <-
-        c(as.Date(paste(
-          min(data_sub_temp$year), "-01-01", sep = ""
-        )), as.Date(paste(
-          max(data_sub_temp$year), "-12-31", sep = ""
-        )))
-      
+
       #if (param== "ConTemp"){
       # p <- ggplot(data=data_sub_temp, aes(x=date, y=ctemp_c, col=site_id)) + geom_line(size=0.3) + ylim(c(0,30))  + ylab("Temperature (\u00B0C)") + xlab("Date")  + scale_x_datetime(breaks=date_breaks("1 year"), labels=date_format("%b-%y")) +
       #geom_hline(yintercept = 24, linetype=2, col = "red") +
@@ -952,17 +952,12 @@ server <- (function(input, output, session) {
           ggplot(data = data_sub_temp, aes(x = date, y = avDayTemp)) + geom_line(aes(col =
                                                                                        site_id, group = grp))  +
           ylim(c(0, 30))  + ylab("Average Daily Temperature (\u00B0C)") +
-          xlab("Date")  +   scale_x_date(
-            date_breaks = "3 months",
-            labels = date_format("%b-%Y"),
-            date_minor_breaks = "1 month",
-            limits = x_lims,
-            expand = c(0, 0)
-          ) +
+          xlab("Date") +
           theme_bw() +
           geom_hline(yintercept = threshold,
                      linetype = 2,
-                     col = "red")
+                     col = "red") +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1))
         
       }
       if (param == "avWeek") {
@@ -973,18 +968,12 @@ server <- (function(input, output, session) {
           ggplot(data = data_sub_temp, aes(x = day1week, y = avWeek, col = site_id)) + geom_point(aes(shape =
                                                                                                         site_id), size = 2) +
           ylim(c(0, 30))  + ylab("MWAT (\u00B0C)") + xlab("Date") +
-          scale_x_date(
-            date_breaks = "3 months",
-            labels = date_format("%b-%Y"),
-            date_minor_breaks = "1 month",
-            limits = x_lims,
-            expand = c(0, 0)
-          ) +
           geom_hline(yintercept = threshold,
                      linetype = 2,
                      col = "red") +
           scale_shape_manual(values = seq(1, 15, 1)) +
-          theme_bw()
+          theme_bw() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1))
       }
       
       return(p)
@@ -995,45 +984,64 @@ server <- (function(input, output, session) {
   }
   
   temp_timeseries_1 <- reactive({
+    filter_dates <- as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month"))
+    
+    
     if (input$temp_param == "avDayTemp") {
       data_sub_temp <- df_temp_7DAVG %>%
-        dplyr::filter(year >= input$wq_yr[1] &
-                        year <= input$wq_yr[2],
+        dplyr::filter(as.Date(date) - as.Date(filter_dates[1])>= 0 & 
+                        as.Date(date) - as.Date(filter_dates[2])<= 0,
                       ws == input$wq_ws,
                       plot_cat == 1)
-      return(time_plot_function(data_sub_temp = data_sub_temp, param = input$temp_param))
     }
     if (input$temp_param == "avWeek") {
       data_sub_temp <- df_temp_MWAT %>%
-        dplyr::filter(year >= input$wq_yr[1] &
-                        year <= input$wq_yr[2],
+        dplyr::filter(as.Date(day1week) - as.Date(filter_dates[1])>= 0 & 
+                        as.Date(day1week) - as.Date(filter_dates[2])<= 0,
                       ws == input$wq_ws,
                       plot_cat == 1)
-      return(time_plot_function(data_sub_temp = data_sub_temp, param = input$temp_param))
-    }
+    }  
+    return(time_plot_function(data_sub_temp = data_sub_temp, param = input$temp_param) + 
+             scale_x_date(
+               date_breaks = "3 months",
+               labels = date_format("%b-%Y"),
+               date_minor_breaks = "1 month",
+               limits = filter_dates,
+               expand = c(0, 0)
+             ))
+
   })
   
   temp_timeseries_2 <- reactive({
+    
+    filter_dates <- as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month"))
+    
     if (input$temp_param == "avDayTemp") {
       data_sub_temp <- df_temp_7DAVG %>%
-        dplyr::filter(year >= input$wq_yr[1] &
-                        year <= input$wq_yr[2],
+        dplyr::filter(as.Date(date) - as.Date(filter_dates[1])>= 0 & 
+                        as.Date(date) - as.Date(filter_dates[2])<= 0,
                       ws == input$wq_ws,
                       plot_cat == 2)
-      p <-
-        time_plot_function(data_sub_temp = data_sub_temp, param = input$temp_param)
-    }
+      }
     if (input$temp_param == "avWeek") {
       data_sub_temp <- df_temp_MWAT %>%
-        dplyr::filter(year >= input$wq_yr[1] &
-                        year <= input$wq_yr[2],
+        dplyr::filter(as.Date(day1week) - as.Date(filter_dates[1])>= 0 & 
+                        as.Date(day1week) - as.Date(filter_dates[2])<= 0,
                       ws == input$wq_ws,
                       plot_cat == 2)
-      p <-
-        time_plot_function(data_sub_temp = data_sub_temp, param = input$temp_param)
+      
     }
+    p <-
+        time_plot_function(data_sub_temp = data_sub_temp, param = input$temp_param) + 
+      scale_x_date(
+        date_breaks = "3 months",
+        labels = date_format("%b-%Y"),
+        date_minor_breaks = "1 month",
+        limits = filter_dates,
+        expand = c(0, 0)
+      )
     
-    return(p)
+    return(p )
   })
   
   
@@ -1095,6 +1103,8 @@ server <- (function(input, output, session) {
     }
   
   wq_data_sub <- reactive({
+    filter_dates <- as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month"))
+    
     param <- input$wq_param
     season <- input$wq_season
     ws <- input$wq_ws
@@ -1102,7 +1112,8 @@ server <- (function(input, output, session) {
     
     data_sub_wq <- df_wq %>%
       dplyr::filter(
-        year >= input$wq_yr[1] & year <= input$wq_yr[2],
+        as.Date(date) - as.Date(filter_dates[1])>= 0 & 
+          as.Date(date) - as.Date(filter_dates[2])<= 0,
         ws %in% input$wq_ws,
         season == input$wq_season
       )
@@ -1173,6 +1184,8 @@ server <- (function(input, output, session) {
       )
     )
   })
+  
+  
   
   
   

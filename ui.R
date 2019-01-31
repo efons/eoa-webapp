@@ -94,7 +94,7 @@ tabItems(
       # Filter inputs
       
       column(3,
-             box(width=12, height=450,
+             box(width=12,
                  
                  
                        h4("Data Filters:")
@@ -274,15 +274,15 @@ tabItem(
   
   # Box for inputs
   fluidRow(
-    box(
-      width = 3,
+    box(title="Data Filters",
+      width = 4,
       sliderInput(
-        inputId = "wq_yr",
-        label = "Year:",
-        min = min(wq_vars_yr),
-        max = max(wq_vars_yr),
-        value = c(min(wq_vars_yr), max(wq_vars_yr)),
-        sep = ''
+        inputId = "wq_dates",
+        label = "From... to...:",
+        min = wq_vars_date[1],
+        max = wq_vars_date[2],
+        value = wq_vars_date,
+        timeFormat= "%b %Y"
       ),
       selectInput(
         inputId = "wq_ws",
@@ -292,7 +292,7 @@ tabItem(
       )
     ),
     #box for map
-    box(width = 9, leafletOutput("map_wq"))
+    box(width = 8, leafletOutput("map_wq"))
   ),
   
   # Box for plots

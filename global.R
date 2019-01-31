@@ -140,7 +140,10 @@ bio_vars_filter <- data.frame(param=c("csci", "asci_hyb", "asci_diatom", 's2',"d
                           threshold3=c(0.92,-1, -1,60,72,70,46)) # NB: set threshold to -1 when no threshold 
 bio_vars_ws <- sort(factor(unique(sheds$SYSTEM), levels=sort(unique(as.character(sheds$SYSTEM)))))
 
-colors_bio <- c("green", "orange", "red","purple")
+colors_bio <- c(rgb(185,224,165,maxColorValue = 255), 
+                rgb(255,255,165,maxColorValue = 255), 
+                rgb(255,145,145,maxColorValue = 255),
+                rgb(246,165,225,maxColorValue = 255))
 
 # subwatershed groups list
 subws <- lapply(bio_vars_ws, function(x) (unique(sites[sites$watershed == x & !is.na(sites$watershed), "subwatershed"]))$subwatershed)
@@ -212,6 +215,12 @@ sites_cWQ <- data.frame(site_id = all_sites_wq,
 
 # parameters to be used for inputs 
 wq_vars_yr <- as.numeric(unique(year(df_temp$date)))  
+wq_vars_date <- 
+  c(as.Date(paste(
+    min(wq_vars_yr), "-01-01", sep = ""
+  )), as.Date(paste(
+    max(wq_vars_yr), "-12-31", sep = ""
+  )))
 wq_vars_yr_2 <- as.numeric(unique(year(df_wq$date))) 
 wq_vars_yr <- seq(min(c(wq_vars_yr, wq_vars_yr_2)), max(c(wq_vars_yr, wq_vars_yr_2)),1)
 
