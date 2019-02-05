@@ -35,7 +35,7 @@ library(latex2exp)
 library(beanplot)
 library(rsconnect)
 library(DT)
-
+library(shinyjs)
 
 
 #  - Import spatial files to be used for mapping

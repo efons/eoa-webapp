@@ -11,6 +11,11 @@
 
 # User interface
 ui_db <- dashboardPage(
+  
+  # implement js package
+  useShinyjs(),
+  
+  
   # Header: Page title
   dashboardHeader(title = "Monitoring Data", titleWidth = 200),
   
@@ -50,11 +55,14 @@ ui_db <- dashboardPage(
     tags$head(tags$style(
       HTML('.content-wrapper {
            overflow-y:scroll
-           }
-            .box {margin:10px}
-            .#tabBox { height:450px;margin:2px; padding=0px}
-           ')
+           } ')
+            #.box {margin:10px}
+            #.#tabBox { height:450px;margin:2px; padding=0px}
+      # to reduce margins between boxes? 
+          
 )),
+
+
 
 
 
@@ -106,7 +114,7 @@ tabItems(
       # Filter inputs
       fluidRow(
         column(3,
-             box(width=12,
+             box(width=12, height = 500,
                  
                  
                        h4("Data Filters:")
@@ -159,6 +167,10 @@ tabItems(
       # MAP
       
       column(9,
+             
+      materialSwitch(inputId="show_details", label = "Show more details?", status="warning"), 
+      
+      
       tabBox(id="summary_bio",
         width = 12,
        
