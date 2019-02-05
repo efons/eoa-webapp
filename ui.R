@@ -13,18 +13,18 @@
 ui_db <- dashboardPage(
   
   # implement js package
-  useShinyjs(),
+  
   
   
   # Header: Page title
-  dashboardHeader(title = "Monitoring Data", titleWidth = 200),
+  dashboardHeader(title = "Creek Monitoring Data", titleWidth = 250),
   
   
   # Sidebar with different types of monitoring data
   dashboardSidebar(
     
     
-    width = 200,
+    width = 250,
     sidebarMenu(
       id = "menu_items",
       selected = "water_quality",
@@ -56,15 +56,15 @@ ui_db <- dashboardPage(
       HTML('.content-wrapper {
            overflow-y:scroll
            } ')
-            #.box {margin:10px}
-            #.#tabBox { height:450px;margin:2px; padding=0px}
-      # to reduce margins between boxes? 
+           
           
 )),
 
+ #.box {margin:10px}
+            #.#tabBox { height:450px;margin:2px; padding=0px}
+      # to reduce margins between boxes? 
 
-
-
+shinyjs::useShinyjs(),
 
 tabItems(
   tabItem(
@@ -81,17 +81,19 @@ tabItems(
     h4("Start by selecting an indicator of creek health. Each indicator is computed based on the diversity and number of individuals for a specific aquatic species: benthic macrovertebrates, algae, etc. Environmental stress might affect the survival of these species. Therefore, these biological measures are a good indicator of creek health."),
 
       # Box for score choice
-      box(
+      tabBox(
         width = 12,
-        status = "warning",
+        height= 220,
+
+        tabPanel(title="Score Selection",
+        
         div(style = "font-weight:bold; color:orange; text-align:center",
             fluidRow(
+              br(),
               h4(" Explore Creek Health Scores in the Santa Clara Basin")
             )),
   
-        
-        fluidRow(
-        column(6,
+        column(4,
           pickerInput(
             inputId = "filter_by",
             label = NULL,
@@ -104,17 +106,24 @@ tabItems(
                    ),
             selected = "csci",
             multiple=F
-          ),
-          offset=3
+          ), offset=4
         )
-    
-      )),
+
+      ),
+      
+      
+      tabPanel(title="Score Description",
+               
+               column(6,dataTableOutput("score_desc")),
+               column(6, textOutput(outputId="score_desc_txt"))
+
+               )),
     
     
       # Filter inputs
       fluidRow(
         column(3,
-             box(width=12, height = 500,
+             box(width=12, height = 600,
                  
                  
                        h4("Data Filters:")
@@ -163,19 +172,73 @@ tabItems(
                      
                 )
              ),
+        
+        
+        
+        
+        
+        
       
       # MAP
       
       column(9,
              
-      materialSwitch(inputId="show_details", label = "Show more details?", status="warning"), 
+
+      
+      box(width = 12, id="stressor_var", title="Stressor Variables:",
+          collapsible = T, collapsed=T,
+          
+          
+          pickerInput(inputId = "size_by",
+                      label = "Explore the relationship with potential Stressors:",
+                      choices = list(
+                        "Habitat" = c(
+                          "Total PHAB" = "tot_phab",
+                          "Epifaunal Substrate" =
+                            "epifaun_substr",
+                          "Sediment Deposition" = "sed_deposition",
+                          "Shannon Diversity (Natural Substrates)" = "shannon_nst",
+                          "% Substrate Smaller than Sand (<2 mm)" = "pct_smaller_sand",
+                          "Percent Boulders - large & small" = "pct_boulder_ls",
+                          "Percent Fast Water of Reach" =
+                            "pct_fast_water",
+                          "IPI Score" = "ipi",
+                          "% Impervious Area - Watershed" =
+                            "pct_imperv_ws",
+                          "Road density - Watershed" = "road_dsty_ws"
+                        ),
+                        "Biomass" = c(
+                          "Chlorophyll a (mg/m2)" = "chloro_a_mg_m2",
+                          "AFDM (g/m2)" = "afdm_g_m2",
+                          "% Macroalgae Cover" = "pct_macroalg_cvr"
+                        ),
+                        "Nutrients" = c(
+                          "Total Nitrogen (mg/L)" = "tn_mg_l",
+                          "Total Phosphorus(mg/L)" = "tp_mg_l",
+                          "Unionized Ammonia (ug/L)" = "uia_ug_l"
+                        ),
+                        "Water Quality" = c(
+                          "Temperature (C)" = "temp_c",
+                          "Dissolved Oxygen" =
+                            "do_mg_l",
+                          "Conductivity (uS/cm)" = "sp_cond_us_cm"
+                        ),
+                        "Other" = c("Human Disturbance Index (HDI)" = "crhdi_swamp")
+                      )
+                      ,
+                      selected = 'tot_phab',
+                      options = pickerOptions(actionsBox = F, liveSearch = T),
+                      multiple = F)
+          
+      ),
       
       
-      tabBox(id="summary_bio",
+      
+      tabBox(id="all_outputs",
         width = 12,
        
       
-       tabPanel(title="Map",
+       tabPanel(title="Map", id="map",
         fluidRow(column(12, leafletOutput("map_sites"))),
         fluidRow(column(
           3, actionButton("reset_button", "Reset view")
@@ -188,139 +251,70 @@ tabItems(
                    animation = "pulse",
                    fill = F
                  )))), 
-       tabPanel(title='Plot',
+       tabPanel(title='Plot', id="summary_plot",
                 plotOutput("barplot"),      
                 prettyCheckbox(inputId="show_bar_pct", label= "Show as %?")
        ),
-       tabPanel(title="Score categories",
-                dataTableOutput("score_desc"))
-        
-        ),tags$head(tags$style(
-          HTML('
-               .#tabBox {height:450px;margin:2px; padding=0px}
-               '))))),
-    
-    br(),
-    br(), 
-    
-    fluidRow(
-    column(8,
+       
+       
+       tabPanel(
+         title = "Detailed Plots",
+         div(id = "detailed_plots",
+           style = "overflow-y: scroll; height: 700px",
+           div(style = "font-weight:bold", textOutput("ws_list_2")),
+           br(),           
            
-      
-
-      box(width = 12,
-          
-        
-              pickerInput(inputId = "size_by",
-                          label = "Explore the relationship with potential Stressors:",
-                          choices = list(
-                            "Habitat" = c(
-                              "Total PHAB" = "tot_phab",
-                              "Epifaunal Substrate" =
-                                "epifaun_substr",
-                              "Sediment Deposition" = "sed_deposition",
-                              "Shannon Diversity (Natural Substrates)" = "shannon_nst",
-                              "% Substrate Smaller than Sand (<2 mm)" = "pct_smaller_sand",
-                              "Percent Boulders - large & small" = "pct_boulder_ls",
-                              "Percent Fast Water of Reach" =
-                                "pct_fast_water",
-                              "IPI Score" = "ipi",
-                              "% Impervious Area - Watershed" =
-                                "pct_imperv_ws",
-                              "Road density - Watershed" = "road_dsty_ws"
-                            ),
-                            "Biomass" = c(
-                              "Chlorophyll a (mg/m2)" = "chloro_a_mg_m2",
-                              "AFDM (g/m2)" = "afdm_g_m2",
-                              "% Macroalgae Cover" = "pct_macroalg_cvr"
-                            ),
-                            "Nutrients" = c(
-                              "Total Nitrogen (mg/L)" = "tn_mg_l",
-                              "Total Phosphorus(mg/L)" = "tp_mg_l",
-                              "Unionized Ammonia (ug/L)" = "uia_ug_l"
-                            ),
-                            "Water Quality" = c(
-                              "Temperature (C)" = "temp_c",
-                              "Dissolved Oxygen" =
-                                "do_mg_l",
-                              "Conductivity (uS/cm)" = "sp_cond_us_cm"
-                            ),
-                            "Other" = c("Human Disturbance Index (HDI)" = "crhdi_swamp")
-                          )
-                          ,
-                          selected = 'tot_phab',
-                          options = pickerOptions(actionsBox = F, liveSearch = T),
-                          multiple = F)
-            
-          ),
-      
-      
-      # TabBox for outputs
-      tabBox(
-        id = "output_tabs",
-        width = 12,
-
-        tabPanel(
-          title = "Plots",
-          id = "overview_plots",
-          div(
-            style = "overflow-y: scroll; height: 700px",
-            div(style = "font-weight:bold", textOutput("ws_list_2")),
-            br(),           
-
-
-            div(style = "font-weight:bold", textOutput("scatterplots")),
-            
-            uiOutput("cond_scatter"),
-            
-            div(style = "font-weight:bold", textOutput("boxplots")),
-            br(),
-            uiOutput("cond_boxplot"),
-            plotOutput("boxplot2")
-          )
-        ),
-        tabPanel(
-          title = "Table",
-          id = "overview_table",
-          div(
-            style = "overflow-y: scroll; height: 700px",
-            div(style = "font-weight:bold", textOutput("ws_list_1")),
-            br(),
-            div(textOutput("score_tables"), style = "font-weight:bold"),
-            br(),
-            div(uiOutput("cond_table"), style = "font-size:90%"),
-            tags$head(tags$style("#cond_table td{
+           
+           div(style = "font-weight:bold", textOutput("scatterplots")),
+           
+           uiOutput("cond_scatter"),
+           
+           div(style = "font-weight:bold", textOutput("boxplots")),
+           br(),
+           uiOutput("cond_boxplot"),
+           plotOutput("boxplot2")
+         )
+       ),
+       tabPanel(id="detailed_table_tab",
+         title = "Detailed Table",
+         
+         div(id = "detailed_table",
+           style = "overflow-y: scroll; height: 700px",
+           div(style = "font-weight:bold", textOutput("ws_list_1")),
+           br(),
+           div(textOutput("score_tables"), style = "font-weight:bold"),
+           br(),
+           div(uiOutput("cond_table"), style = "font-size:90%"),
+           tags$head(tags$style("#cond_table td{
                                  position:relative;
                                  };"))
-                              )
-            ),
+         )
+       ),
+       
+       tabPanel(
+         title = "Site-specific",
+         div(
+         id = "site_info",
+         h5("Click on a site on the map to visualize site-specific information"),
+         textOutput("site_info"),
+         tableOutput("table_site_onClick"))
+       )
+       
+       
+       
+  
         
-        tabPanel(
-          title = "Watershed-specific",
-          id = "ws_info",
-          h5("Click on a watershed to get detailed information"),
-          textOutput("ws_info")
-        ),
-        
-        tabPanel(
-          title = "Site-specific",
-          id = "site_info",
-          h5("Click on a site on the map to visualize site-specific information"),
-          textOutput("site_info"),
-          tableOutput("table_site_onClick")
-        ),
-        
-        tabPanel(
-          title = "Data Download",
-          id = "dwnload",
-          h5("Filter data and download various file types below.")
-          
-        )
-        
-        
-          )
-      , offset=2)))
-,
+        )))),
+    
+
+    
+
+           
+    
+      
+      
+
+
 
 
 
@@ -432,32 +426,7 @@ tabItem(tabName = "pesticide",
 # POC Menu Item
 tabItem(
   tabName = "poc",
-  h2("Pollutants of Concern"),
-  
-  # Box for inputs
-  fluidRow(box(
-    selectInput(
-      inputId = "poc_contaminant",
-      label = "Contaminant:",
-      choices = c("Mercury" = "hg", "PCB" = "pcb"),
-      selected = "hg"
-    ),
-    sliderInput(
-      inputId = "poc_yr",
-      label = "Time period",
-      min = min(poc_vars_yr),
-      max = max(poc_vars_yr),
-      value = c(min(poc_vars_yr), max(poc_vars_yr)),
-      sep = ""
-    )
-  ),
-  # Box for plots
-  box(
-    plotOutput("plot_poc_1", height = "200px")
-  )),
-  
-  # Box for map
-  fluidRow(box(width = 12, leafletOutput("map_poc")))
+  h2("Pollutants of Concern")
   
   
   
@@ -466,7 +435,7 @@ tabItem(
 
 # Trash Menu Item
 tabItem(tabName = "trash",
-        h2("Trash Data"))
+        h2("Trash Pollution"))
     )
   )
 )

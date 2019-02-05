@@ -14,7 +14,19 @@ server <- (function(input, output, session) {
   
   
   # Score description 
-
+    
+    output$score_desc_txt <- renderText({
+      score <- input$filter_by 
+      score_name <- bio_vars_filter[which(bio_vars_filter$param == score),"name"]
+      
+      description <- if (score == "csci") {"CSCI stands for California Stream Condition Index. This
+        index was developed in ... by ... to .... Values of this index are computed based on ... and thus
+        represent .... The values range from 0 to 1, 0 representing the worst score, and 1 the best score.
+        See the table to the left for a more detailed presentation of CSCI score breaks"}
+      
+      paste0(score_name, ": ", description)
+    })
+    
     output$score_desc <- DT::renderDataTable({
       df <- bio_vars_filter %>% dplyr::filter(param == input$filter_by) %>% 
         dplyr::select(seq(3,6)) %T>% 
@@ -35,11 +47,18 @@ server <- (function(input, output, session) {
       
       
       df <- df %>% datatable(options = list(autoWidth=F,columnDefs = list(list(targets=2, visible=F)), dom='t', bSort=F)) %>% 
-        formatStyle(1,2,backgroundColor=styleEqual(col,colors_bio[col]), color=styleEqual(col,c(rep("black",3),"white")))
+        formatStyle(1,2,backgroundColor=styleEqual(col,colors_bio[col]), color=styleEqual(col,c(rep("black",3),"white"))) %>%
+        formatStyle( 0, target= 'row',lineHeight='70%')
 
       return(df)
   })
   
+    
+    
+    
+  # SUmmary or detailed version? 
+
+    
   
   # map parameter : size filter by stressor variable
  

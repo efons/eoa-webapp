@@ -37,6 +37,8 @@ library(rsconnect)
 library(DT)
 library(shinyjs)
 
+# packageDescription("shinyjs", fields="License")
+# Check license status 
 
 #  - Import spatial files to be used for mapping
 ################################################################################################################################################
@@ -148,28 +150,6 @@ colors_bio <- c(rgb(166,219,160,maxColorValue = 255),
 # subwatershed groups list
 subws <- lapply(bio_vars_ws, function(x) (unique(sites[sites$watershed == x & !is.na(sites$watershed), "subwatershed"]))$subwatershed)
 names(subws) <- bio_vars_ws
-
-
-# B - Import and reshape POC data 
-############################################################################################################################
-############################################################################################################################
-
-colors_PCB <- c("green", "orange", "red", "purple")
-colors_Hg <- c('',"green", "orange", "red")
-
-df_POC <- read_excel("POC_Sediment_Samples.xlsx", sheet="SC")
-df_POC <- df_POC %>% 
-  dplyr::select(1:6,8:9,11,14) %>% 
-  mutate(pcb_conc_cat = factor(pcb_conc_cat, levels=c("<0.2 mg/kg","0.2 - 0.5 mg/kg","0.5 - 1.0 mg/kg",">1.0 mg/kg")),
-         hg_conc_cat = factor(hg_conc_cat, levels=c("None","<0.3 mg/kg","0.3 - 1.0 mg/kg",">1.0 mg/kg"))) %>%
-  mutate(pcb_col = colors_PCB[as.numeric(pcb_conc_cat)], hg_col = colors_Hg[as.numeric(hg_conc_cat)]) %>%
-  mutate(hg_mg_kg = ifelse(hg_mg_kg > 0, hg_mg_kg,0)) %>% 
-  filter(!is.na(samp_date)) %>% 
-  mutate(year = year(samp_date))
-
-poc_vars_yr <- as.numeric(unique(year(df_POC$samp_date)))
-poc_vars_yr <- sort(poc_vars_yr)
-unique(df_POC$site_id) # /!\ duplicate sites <- fix for point visualization 
 
 
 
