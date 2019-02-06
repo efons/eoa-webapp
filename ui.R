@@ -55,9 +55,9 @@ ui_db <- dashboardPage(
     tags$head(tags$style(
       HTML('.content-wrapper {
            overflow-y:scroll
-           } ')
-           
-          
+           } 
+           .small-box {height: 100px}')
+
 )),
 
  #.box {margin:10px}
@@ -69,17 +69,31 @@ shinyjs::useShinyjs(),
 tabItems(
   tabItem(
     tabName = "overview",
-    h2("Overview"),
-    h5("Welcome to EOA's data visualization dashboard!"),
-    h5("Presentation of the data: blah blah blah"),
-    h5("Browse the sidebar menu items on the left to explore the data!")
-  ),
+
+    img(src="scvurppp_logo.png", width='600px'),
+    br(), 
+    br(), 
+    box(width=12,status="primary",
+    h4("Welcome to the SCVURPPP data visualization dashboard."),
+    br(), 
+
+    h5("Data is made available thanks to biological, physical and chemical monitoring efforts across Santa Clara Valley over several years.
+Explore data, maps, graphs and interactive features as they become available."),
+    h5("Browse the sidebar menu items on the left to explore the data!"),
+    br(),
+    
+    tagList("For more information about the program, and to access reports and analyses of these monitoring results, go to the", a("SCVURPPP Website", href="http://scvurppp.org/scvurppp_2018/")),
+    h5("For any questions or issues regarding this web application, please contact: email address TBD")
+    
+  
+    )),
   
   tabItem(
-    tabName = "bio_data",
-    h2("Biological Condition Assessment"),
-    h4("Start by selecting an indicator of creek health. Each indicator is computed based on the diversity and number of individuals for a specific aquatic species: benthic macrovertebrates, algae, etc. Environmental stress might affect the survival of these species. Therefore, these biological measures are a good indicator of creek health."),
+    tabName = "bio_data",    
+    tags$div(title="Click here for instructions",actionLink(inputId="bio_tab_title", label=" ", icon=icon("question-circle"))),
 
+    h2("Biological Condition Assessment"),
+ 
       # Box for score choice
       tabBox(
         width = 12,
@@ -89,7 +103,6 @@ tabItems(
         
         div(style = "font-weight:bold; color:orange; text-align:center",
             fluidRow(
-              br(),
               h4(" Explore Creek Health Scores in the Santa Clara Basin")
             )),
   
@@ -115,9 +128,11 @@ tabItems(
       tabPanel(title="Score Description",
                
                column(6,dataTableOutput("score_desc")),
-               column(6, textOutput(outputId="score_desc_txt"))
+               column(6, br(), br(), textOutput(outputId="score_desc_txt"))
 
                )),
+    
+   
     
     
       # Filter inputs
@@ -183,14 +198,17 @@ tabItems(
       
       column(9,
              
-
+             fluidRow(valueBoxOutput("vbox_vla", width=3),
+                      valueBoxOutput("vbox_la", width=3),
+                      valueBoxOutput("vbox_pi", width=3),
+                      valueBoxOutput("vbox_li",width=3)),
       
       box(width = 12, id="stressor_var", title="Stressor Variables:",
           collapsible = T, collapsed=T,
           
           
           pickerInput(inputId = "size_by",
-                      label = "Explore the relationship with potential Stressors:",
+                      label = tags$i("Explore the relationship between the selected score and potential Stressors by selecting a variable, and clicking the 'Detailed Plots' or 'Detailed Table' tabs below:"),
                       choices = list(
                         "Habitat" = c(
                           "Total PHAB" = "tot_phab",
@@ -261,14 +279,18 @@ tabItems(
          title = "Detailed Plots",
          div(id = "detailed_plots",
            style = "overflow-y: scroll; height: 700px",
+           
+           tags$i(h5("Select a potential stressor variable in the dropdown menu above to explore its relationship to creek health scores.")),
+           br(),
            div(style = "font-weight:bold", textOutput("ws_list_2")),
            br(),           
-           
-           
            div(style = "font-weight:bold", textOutput("scatterplots")),
            
            uiOutput("cond_scatter"),
            
+           actionLink(inputId="interpret_scatter", label="Help on interpreting scatterplot coefficients", icon = icon("question-circle")),
+           br(),
+           br(),
            div(style = "font-weight:bold", textOutput("boxplots")),
            br(),
            uiOutput("cond_boxplot"),
@@ -280,6 +302,10 @@ tabItems(
          
          div(id = "detailed_table",
            style = "overflow-y: scroll; height: 700px",
+           
+           tags$i(h5("Select a potential stressor variable in the dropdown menu above to explore its relationship to creek health scores.")),
+           tags$i(h5("You can download this table, as well as all the other monitoring results for the selected watersheds and time period, using the 'Download Data' tool on the left of the page.")),
+           br(),
            div(style = "font-weight:bold", textOutput("ws_list_1")),
            br(),
            div(textOutput("score_tables"), style = "font-weight:bold"),
@@ -295,7 +321,7 @@ tabItems(
          title = "Site-specific",
          div(
          id = "site_info",
-         h5("Click on a site on the map to visualize site-specific information"),
+         tags$i(h5("Click on a site on the map to visualize site-specific information")),
          textOutput("site_info"),
          tableOutput("table_site_onClick"))
        )

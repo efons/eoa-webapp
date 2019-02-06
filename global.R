@@ -291,15 +291,21 @@ addLegendCustom <- function(map, position, colors, labels, sizes, shapes, border
     }
 
 # Custom scatterplots
-ggplotRegression <- function (fit) {
+ggplotRegression <- function (x,y) {
   
-  lb1 <- paste(sep="", "R-squared =", signif(summary(fit)$r.squared, 4))
-  lb2 <- paste(sep="", "p-value =",signif(summary(fit)$coef[2,4], 3))
+  fit <- lm(y~x)
+  lb1 <- paste(sep="", "R-squared = ", signif(summary(fit)$r.squared, 4))
+  lb2 <- paste(sep="", "p-value = ",signif(summary(fit)$coef[2,4], 3))
+  lb3 <- paste(sep="", "Rho = ",signif(cor.test(x=x,y=y,method="spearman",use="complete.obs", exact = F)$estimate,4))
+  lb4 <- paste(sep="", "p-value = ",signif(cor.test(x=x,y=y,method="spearman",use="complete.obs", exact=F)$p.value,3))
+  
+  
   
   ggplot(fit$model, aes_string(x = names(fit$model)[2], y = names(fit$model)[1])) + 
     geom_point(col = "blue") + 
     stat_smooth(method = "lm", col = "grey40", se=F, linetype=2) +
-    ggtitle(paste(lb1,", ", lb2, sep=""))
+    ggtitle(paste(paste("Pearson: ",lb1,", ", lb2, sep=""),
+                  paste("Spearman: ",lb3,', ',lb4, sep=''), sep="\n"))
   
 }
 

@@ -12,6 +12,19 @@ server <- (function(input, output, session) {
   ## Bioassessment data
   ###################################################################################################################
   
+  # Help bio tab 
+  
+  observeEvent(input$bio_tab_title,{
+    showModal(modalDialog(
+      title = "Biological Condition Assessment",
+      tags$i("Start by selecting an indicator of creek health. Each indicator is computed based on the diversity and number of individuals for a specific aquatic species: benthic macrovertebrates, algae, etc. Environmental stress might affect the survival of these species. Therefore, these biological measures
+              can be used as indicators of creek health.This dashboard allows you to visualize the biological health of creeks
+              throughout the Santa Clara Valley, and to investigate the role played by environmental stress on biological condition.")
+      ,
+      easyClose = TRUE, footer=modalButton("Got it!")
+    ))
+  })
+
   
   # Score description 
     
@@ -24,7 +37,7 @@ server <- (function(input, output, session) {
         represent .... The values range from 0 to 1, 0 representing the worst score, and 1 the best score.
         See the table to the left for a more detailed presentation of CSCI score breaks"}
       
-      paste0(score_name, ": ", description)
+      paste0(description)
     })
     
     output$score_desc <- DT::renderDataTable({
@@ -55,8 +68,10 @@ server <- (function(input, output, session) {
   
     
     
-    
-  # SUmmary or detailed version? 
+
+  # Summary or detailed version? 
+    # option to show/hide the detailed info ? 
+    # using shinyjs or other
 
     
   
@@ -166,6 +181,53 @@ server <- (function(input, output, session) {
     
   })
   
+  
+  # Value boxes   
+  output$vbox_vla <- renderValueBox({
+    data <- data_sub()
+    pct_vla <- 100*signif(sum(data[,7]==colors_bio[4])/nrow(data),2)
+    
+    valueBox(
+      subtitle=tags$p("of sites are Very Likely Altered", style="font-size:95%"),
+      color="purple",
+      value= paste(pct_vla, "%"),
+      icon = icon("bolt")
+    )
+  })
+  output$vbox_la <- renderValueBox({
+    data <- data_sub()
+    pct_la <- 100*signif(sum(data[,7]==colors_bio[3])/nrow(data),2)
+    
+    valueBox(
+      subtitle=tags$p("of sites are Likely Altered",style="font-size:95%"),
+      color="red",
+      value= paste(pct_la, "%"),
+      icon = icon("bolt")
+    )
+  })
+  output$vbox_pi <- renderValueBox({
+    data <- data_sub()
+    pct_pi <- 100*signif(sum(data[,7]==colors_bio[2])/nrow(data),2)
+    
+    valueBox(
+      subtitle=tags$p("of sites are Possibly Intact",style="font-size:95%"),
+      color="yellow",
+      value= paste(pct_pi, "%"),
+      icon = icon("tint")
+    )
+  })
+  
+  output$vbox_li <- renderValueBox({
+    data <- data_sub()
+    pct_li<- 100*signif(sum(data[,7]==colors_bio[1])/nrow(data),2)
+    
+    valueBox(
+      subtitle=tags$p("of sites are Likely Intact",style="font-size:95%"),
+      color="green",
+      value= paste(pct_li, "%"),
+      icon = icon("tint")
+    )
+  })
   
   # List of selected watersheds
   ws_list <- reactive({
@@ -342,12 +404,29 @@ server <- (function(input, output, session) {
     data_sub_plots <- as.data.frame(data_sub())
     x_var <- data_sub_plots[, 8]
     y_var <- data_sub_plots[, 6]
-    p <- ggplotRegression(lm(y_var ~ x_var)) +
+    p <- ggplotRegression(y=y_var,x= x_var) +
       xlab(colnames(data_sub_plots)[8]) + ylab(colnames(data_sub_plots)[6])
     return(p)
   }, height = 300, width = 400)
   
   
+  # Scatterplots help window 
+  observeEvent(input$interpret_scatter,{
+    showModal(modalDialog(
+      title = "Scatterplot coefficients",
+      "Pearson's correlation test assesses the strength of the linear relationship
+              between two variables (assumed to be normally distributed). 
+              Both R-squared and p-value can take values between 0 and 1. The closer R-squared is to 1, the stronger the relationship. 
+              The relationship is generally considered to be significant if p-value is below the significance level (e.g. 0.05). 
+              Spearman's correlation test assesses the strength of the monotonic relationship (i.e. either decreasing or increasing, 
+              but not necessarily linear) between the two variables, regardless of their distribution (non-parametric test). 
+              Spearman's Rho can take values between +1 and -1. Values of +1 or -1 indicate a strong monotonic relationship, whether the variables are
+              negatively (-) or positively (+) correlated. p-values below 0.05 are generally considered significant.",
+      easyClose = TRUE, footer=modalButton("Got it!")
+    ))
+  })
+  
+  # Boxplots 
   output$boxplots <- renderText({
     ifelse(
       input$spatial_filter == "sub_ws",
@@ -664,133 +743,7 @@ server <- (function(input, output, session) {
   ## POC data
   ############################################################################################################################
   
-  # Plot for POC
-  
-  data_sub_poc <- reactive({
-    poc_contaminant <- input$poc_contaminant
-    sites_POC <- df_POC %>%
-      dplyr::filter(year >= input$poc_yr[1] &
-                      year <= input$poc_yr[2])
-    
-    if (poc_contaminant == "hg")
-    {
-      sites_POC <-
-        sites_POC %>% dplyr::mutate(selected_cont = hg_mg_kg) %>%
-        dplyr::mutate(conc_cat = as.factor(hg_conc_cat))
-    }
-    else {
-      sites_POC <-
-        sites_POC %>% dplyr::mutate(selected_cont = pcbs_mg_kg) %>%
-        dplyr::mutate(conc_cat = as.factor(pcb_conc_cat))
-    }
-    
-    return(sites_POC)
-  })
-  
-  output$plot_poc_1 <- renderPlot({
-    data_sub_poc <- data_sub_poc()
-    n <- length(unique(conc_cat))
-    colors <- if (n == 3) {
-      colors_Hg[2:4]
-    } else {
-      colors_PCB
-    }
-    
-    ggplot(data = data_sub_poc, aes(x = factor(city), fill = conc_cat)) + geom_bar() +
-      scale_fill_manual(values = colors) +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1),
-            legend.title = element_blank()) +
-      xlab("City")
-  })
-  
-  
-  # MAP for POC
-  output$map_poc <- renderLeaflet({
-    leaflet() %>%
-      addProviderTiles(providers$Esri.WorldTopoMap) %>%
-      setView(lng = -122,
-              lat = 37.4,
-              zoom = 10)
-  })
-  
-  # Update map with user inputs
-  observe({
-    # wait for POC menu to be selected
-    req(input$menu_items == "poc")
-    
-    poc_contaminant <- input$poc_contaminant
-    
-    sites_poc <-
-      df_POC %>%  dplyr::filter(year >= input$poc_yr[1] &
-                                  year <= input$poc_yr[2])
-    
-    content_poc <- paste(
-      sep = "<br/>",
-      "<b>City:</b>",
-      sites_poc$city,
-      "<b>Concentration:</b>",
-      if (poc_contaminant == "hg") {
-        paste(sites_poc$hg_mg_kg, "mg/kg")
-      } else
-        paste(sites_poc$pcbs_mg_kg, "mg/kg"),
-      "<b>Date:</b>",
-      sites_poc$samp_date
-    )
-    
-    getRadius_poc <- function(df) {
-      if (poc_contaminant == "hg") {
-        rad <-
-          500 * (df$hg_mg_kg + 1) * (12 - as.numeric(df$hg_conc_cat)) / max(df$hg_mg_kg)
-      }
-      else
-        rad <-
-          30000 * (df$pcbs_mg_kg + 1) * (4.2 - as.numeric(df$pcb_conc_cat)) / max(df$pcbs_mg_kg)
-      rad
-    }
-    
-    getColor_poc <- function(df) {
-      if (poc_contaminant == "hg") {
-        col <- df$hg_col
-      }
-      else
-        col <- df$pcb_col
-      col
-    }
-    
-    lab_poc <-
-      if (poc_contaminant == "hg") {
-        levels(sites_poc$hg_conc_cat)[2:4]
-      } else
-        levels(sites_poc$pcb_conc_cat)
-    colors_poc <-
-      if (poc_contaminant == "hg") {
-        colors_Hg[2:4]
-      } else
-        colors_PCB
-    
-    leafletProxy("map_poc") %>% clearMarkers() %>% clearShapes() %>% clearControls() %>%
-      addCircleMarkers(
-        lng = sites_poc$long,
-        lat = sites_poc$lat,
-        radius = 5,
-        color = getColor_poc(sites_poc),
-        weight = 1,
-        popup = content_poc,
-        opacity = 0.7,
-        fillOpacity = 0.5
-      ) %>%
-      addLegend(
-        "topright",
-        colors = colors_poc,
-        labels = lab_poc,
-        title = "Color Key",
-        layerId = "colorLegend"
-      )
-    
-  })
-  
-  
-  
+ 
   
   
   
