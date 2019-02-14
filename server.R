@@ -115,13 +115,13 @@ server <- (function(input, output, session) {
     size_name <- as.character(param_names$fullname[which(param_names$dataname == size_by)])
     
     data_sub <-
-      df_bio %>% filter(year >= input$wy[1] & year <= input$wy[2]) %>%
-      filter(if (input$spatial_filter == "sub_ws") {
+      df_bio %>% dplyr::filter(year >= input$wy[1] & year <= input$wy[2]) %>%
+      dplyr::filter(if (input$spatial_filter == "sub_ws") {
         ws %in% input$ws
       } else {
         ws %in% bio_vars_ws
       }) %>%
-      mutate(year = factor(year, levels = seq(
+      dplyr::mutate(year = factor(year, levels = seq(
         min(bio_vars_yr), max(bio_vars_yr), 1
       ))) %>%
       dplyr::select(c("rmc_id", "ws", "subws","creek", "year", filter_by, size_by))  %>%
@@ -142,9 +142,9 @@ server <- (function(input, output, session) {
     
     if (nrow(data_sub) > 0) {
       data_sub <- data_sub %>%
-        mutate(filter_by_chr = NA) %>% # Makes unknown column'' error appear
-        select(c(1, 2, 3, 4, 5, 6, 8, 7)) %>%
-        rename_at(7, ~ paste(filter_name, " ", sep = ''))
+        dplyr::mutate(filter_by_chr = NA) %>% # Makes unknown column'' error appear
+        dplyr::select(c(1, 2, 3, 4, 5, 6, 8, 7)) %>%
+        dplyr::rename_at(7, ~ paste(filter_name, " ", sep = ''))
       
       
       
