@@ -36,7 +36,7 @@ ui_db <- dashboardPage(
         startExpanded = T,
         menuSubItem("Biomonitoring Data", tabName = "bio_data"),
         menuSubItem("Continuous Water Quality", tabName = "con_wq"),
-        menuSubItem("Pathogens", tabName = "pathogens"),
+        menuSubItem("Bacterial Indicators", tabName = "pathogens"),
         menuSubItem("Chlorine", tabName = 'chlorine'),
         menuSubItem("Pesticides", tabName = "pesticide")
       ),
@@ -45,7 +45,7 @@ ui_db <- dashboardPage(
         tabName = "poc",
         icon = icon("exclamation")
       ),
-      menuItem("Trash", tabName = "trash", icon = icon("trash"))
+      menuItem("Trash in creeks", tabName = "trash", icon = icon("trash"))
     )
   ),
   
@@ -438,13 +438,17 @@ tabItem(
 
 
 tabItem(tabName = "pathogens",
-        h2("Pathogens")),
+        h2("Bacterial Indicators"),
+        h4("Under construction")),
+        
 
 tabItem(tabName = "chlorine",
-        h2("Chlorine")),
+        h2("Chlorine"),
+        h4("Under construction")),
 
 tabItem(tabName = "pesticide",
-        h2("Pesticides")),
+        h2("Pesticides"),
+        h4("Under Construction")),
 
 
 
@@ -452,16 +456,34 @@ tabItem(tabName = "pesticide",
 # POC Menu Item
 tabItem(
   tabName = "poc",
-  h2("Pollutants of Concern")
+  h2("Pollutants of Concern"),
+  h4("Concentration of Mercury and PCBs in sediments across the Santa Clara Valley"), 
+  h4("Under construction"), 
   
+  # Box for inputs 
+  column(4,box(width=12, selectInput(inputId="poc_contaminant",label="Contaminant:", choices=c("Mercury"="hg", "PCB"="pcb"), selected = "hg"),
+                sliderInput(inputId="poc_yr", label="Time period", min =min(poc_vars_yr), max=max(poc_vars_yr), value=c(min(poc_vars_yr),max(poc_vars_yr)), sep=""),
+               br(),
+               downloadButton("downloadData_poc", label = "Data"),
+               # Input: Choose file type ----
+               radioButtons("file_type_poc", NULL, inline = T,
+                            choices = c(".csv", ".xlsx")))),
+   # Box for outputs 
+          column(8,tabBox(width=12,
+             tabPanel(title="Map",
+                     leafletOutput("map_poc")),
+             tabPanel(title="Plot",plotOutput("plot_poc_1", height="400px"),
+                      prettyCheckbox(inputId="show_bar_pct_POC", label= "Show as %?"))))
   
+
   
 ),
 
 
 # Trash Menu Item
 tabItem(tabName = "trash",
-        h2("Trash Pollution"))
+        h2("Trash Pollution"),
+        h4("Receiving Water Monitoring... Under construction"))
     )
   )
 )

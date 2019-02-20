@@ -742,8 +742,146 @@ server <- (function(input, output, session) {
   
   ## POC data
   ############################################################################################################################
+
+  # Plot for POC
   
- 
+  data_sub_poc <- reactive({
+    poc_contaminant <- input$poc_contaminant
+    sites_POC <- df_POC %>%  dplyr::filter(year >= input$poc_yr[1] & year <= input$poc_yr[2])
+    
+    if(poc_contaminant == "hg")
+    {sites_POC <- sites_POC %>% mutate( selected_cont = hg_mg_kg )} 
+    else {sites_POC <- sites_POC %>% mutate(selected_cont= pcbs_mg_kg)}
+  })
+  
+  
+  barplot_poc <- reactive({
+    data_sub_poc <- data_sub_poc()
+    
+    
+    if (!input$show_bar_pct_POC){
+      if (input$poc_contaminant == "hg"){  
+      p <- ggplot(data = data_sub_poc, aes(x = city, fill = hg_conc_cat)) + geom_bar(position="stack",stat='count') + ylab("Number of samples") + 
+        scale_fill_manual("Concentration Category",values=colors_Hg) 
+      
+    }
+    else {  
+      p <- ggplot(data = data_sub_poc, aes(x = city, fill = pcb_conc_cat)) + geom_bar(position="stack",stat='count') + ylab("Number of samples") +
+        scale_fill_manual("Concentration Category",values=colors_PCB) 
+      
+    }
+    }
+    else {
+      if (input$poc_contaminant == "hg"){  
+        data_sub_poc <- data_sub_poc %>% 
+          dplyr::group_by(city, hg_conc_cat) %>% 
+          dplyr::summarise(n = n()) 
+        
+        p <- ggplot(data = data_sub_poc, aes(x = city, y=n, fill = hg_conc_cat)) + geom_bar(position="fill",stat='identity') + ylab("Percentage of samples") +
+          scale_y_continuous(labels = percent_format()) + 
+          scale_fill_manual("Concentration Category",values=colors_Hg) 
+      }
+      
+      else{data_sub_poc <- data_sub_poc %>% 
+        dplyr::group_by(city, pcb_conc_cat) %>% 
+        dplyr::summarise(n = n()) 
+      
+      p <- ggplot(data = data_sub_poc, aes(x = city, y=n, fill = pcb_conc_cat)) + geom_bar(position="fill",stat='identity') + ylab("Percentage of samples") +
+        scale_y_continuous(labels = percent_format()) + 
+        scale_fill_manual("Concentration Category",values=colors_PCB) }
+    }
+    
+    
+    p + theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
+      xlab("City")
+  })
+  
+  
+  output$plot_poc_1 <- renderPlot({
+    p <- barplot_poc()
+    return(p)  
+    })
+  
+  # MAP for POC 
+  output$map_poc <- renderLeaflet({
+    leaflet() %>% 
+      addProviderTiles(providers$Esri.WorldTopoMap) %>% 
+      setView(lng = -122, lat = 37.4, zoom = 10)
+  })
+  
+  # Update map with user inputs 
+  observe({
+    
+    # wait for POC menu to be selected 
+    req(input$menu_items == "poc") 
+    
+    poc_contaminant <- input$poc_contaminant
+    
+    sites_poc <- df_POC %>%  dplyr::filter(year >= input$poc_yr[1] & year <= input$poc_yr[2])
+    
+    content_poc <- paste(
+      sep = "<br/>",
+      "<b>City:</b>",
+      sites_poc$city,
+      "<b>Concentration:</b>",
+      if (poc_contaminant == "hg") {paste(sites_poc$hg_mg_kg, "mg/kg")} else paste(sites_poc$pcbs_mg_kg, "mg/kg"),
+      "<b>Date:</b>",
+      sites_poc$samp_date
+    )
+    
+    getRadius_poc <- function(df){
+      if (poc_contaminant == "hg"){
+        rad <- 500*(df$hg_mg_kg+1)*(12-as.numeric(df$hg_conc_cat))/max(df$hg_mg_kg)
+      }
+      else rad <- 30000*(df$pcbs_mg_kg+1)*(4.2-as.numeric(df$pcb_conc_cat))/max(df$pcbs_mg_kg)
+      rad
+    }
+    
+    getColor_poc <- function(df){
+      if (poc_contaminant == "hg") {col <- df$hg_col}
+      else col <- df$pcb_col
+      col
+    }
+    
+    lab_poc <- if(poc_contaminant == "hg") {levels(sites_poc$hg_conc_cat)[2:4]} else levels(sites_poc$pcb_conc_cat)
+    colors_poc <- if(poc_contaminant == "hg") {colors_Hg[2:4]} else colors_PCB
+    
+    leafletProxy("map_poc") %>% clearMarkers() %>% clearShapes() %>% clearControls() %>%
+      addCircleMarkers(lng=sites_poc$long, lat=sites_poc$lat, radius=5, color=getColor_poc(sites_poc), weight=1, popup = content_poc, opacity = 0.7, fillOpacity = 0.5) %>%
+      addLegend("topright", colors=colors_poc, labels=lab_poc, title="Color Key", layerId="colorLegend")
+    
+  })
+  
+  
+  
+  # Download data 
+  output$downloadData_poc <- downloadHandler(
+    
+    filename = function() {
+      paste(input$poc_contaminant, "_table", Sys.Date(), input$file_type_poc, sep = "")
+    },
+    #   content = function(file) {
+    #      write.xlsx(data_sub(), file)
+    #   }
+    
+    content = function(file) {
+      
+      
+      data_to_dwn <- data_sub_poc() %>% 
+        select(c(3,2,1,5,6,4,7,8,9,10)) %T>% 
+        {names(.) <- c("County", "City", "Site ID", "Latitude", "Longitude", "Sampling Date", "PCB Concentration (mg/kg)", "Hg Concentration (mg/kg)", "Concentration Category (PCB)", "Concentration Category (Hg")}
+      
+      
+      if(input$file_type_poc== ".csv") {
+        write.csv(data_to_dwn, file, row.names = FALSE)
+      } else if(input$file_type == ".xlsx") {
+        write.xlsx(data_to_dwn, file)
+      }
+    }
+    
+  )
+  
+  
   
   
   
