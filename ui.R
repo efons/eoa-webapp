@@ -35,7 +35,8 @@ ui_db <- dashboardPage(
         icon = icon("tint"),
         startExpanded = T,
         menuSubItem("Biomonitoring Data", tabName = "bio_data"),
-        menuSubItem("Continuous Water Quality", tabName = "con_wq"),
+        menuSubItem("Continuous Temperature", tabName = "con_temp"),
+        menuSubItem("Seasonal Water Quality", tabName= "con_wq"),
         menuSubItem("Bacterial Indicators", tabName = "pathogens"),
         menuSubItem("Chlorine", tabName = 'chlorine'),
         menuSubItem("Pesticides", tabName = "pesticide")
@@ -347,7 +348,7 @@ Explore data, maps, graphs and interactive features as they become available."),
 
 tabItem(
   tabName = "con_wq",
-  h2("Continuous Water Quality & Continuous Temperature"),
+  h2("Seasonal Water Quality Monitoring"),
   
   # Box for inputs
   fluidRow(
@@ -374,31 +375,8 @@ tabItem(
   
   # Box for plots
   fluidRow(
-    tabBox(
+    box(
       width = 12,
-      height = 800,
-      id = "wq_plots",
-      tabPanel(
-        title = "Continuous Temperature",
-        id = "con_temp_plot",
-        selectInput(
-          inputId = "temp_param",
-          label = "Parameter:",
-          choices = c(
-            "Continuous Temperature" = "ConTemp",
-            "Daily Average" = "avDayTemp",
-            "Daily Max" = "maxDayTemp",
-            "Weekly Average" = "avWeek",
-            "Weekly Maximum" = "maxWeek"
-          ),
-          selected = "avDayTemp"
-        ),
-        plotOutput("temp_timeseries_1"),
-        plotOutput("temp_timeseries_2")
-      ),
-      tabPanel(
-        title = "Seasonal Water Quality Parameters",
-        id = "wq_plot",
         fluidRow(column(
           3,
           selectInput(
@@ -433,7 +411,51 @@ tabItem(
       )
     )
   )
-),
+,
+
+tabItem(tabName="con_temp",
+        h2("Continuous Temperature Monitoring"),
+        
+        # Box for inputs
+        fluidRow(
+          box(title="Data Filters",
+              width = 4,
+              sliderInput(
+                inputId = "temp_dates",
+                label = NULL,
+                min = wq_vars_date[1],
+                max = wq_vars_date[2],
+                value = wq_vars_date,
+                timeFormat= "%b %Y"
+              ),
+              selectInput(
+                inputId = "temp_ws",
+                label = "Watershed:",
+                choices = as.character(wq_vars_ws),
+                selected = as.character(wq_vars_ws[1])
+              )
+          ),
+          #box for map
+          box(width = 8, leafletOutput("map_temp"))
+        ),
+        
+        # Plot Outputs
+        box(
+        id = "con_temp_plot",
+        selectInput(
+          inputId = "temp_param",
+          label = "Parameter:",
+          choices = c(
+            "Continuous Temperature" = "ConTemp",
+            "Daily Average" = "avDayTemp",
+            "Daily Max" = "maxDayTemp",
+            "Weekly Average" = "avWeek",
+            "Weekly Maximum" = "maxWeek"
+          ),
+          selected = "avDayTemp"
+        ),
+        plotOutput("temp_timeseries_1"),
+        plotOutput("temp_timeseries_2"))),
 
 
 

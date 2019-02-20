@@ -913,49 +913,11 @@ server <- (function(input, output, session) {
       "<b>Site:</b>",
       sites_cWQ$site_id,
       "<b>Watershed:</b>",
-      sites_cWQ$ws,
-      "<b>Continuous Water Quality Sampling in:</b>",
-      sites_cWQ$sampl_dates_wq,
-      "<b>Continuous Temperature Sampling in:</b>",
-      sites_cWQ$sampl_dates_temp
+      sites_cWQ$ws
     )
     
     get_color_wq <- function() {
-      if (input$wq_plots == "Continuous Temperature") {
-        if (input$temp_param == "avDayTemp") {
-          threshold <-
-            temp_thresholds[temp_thresholds$param == "avDayTemp", "thresh"]
-          df_sub <- df_temp_7DAVG %>%
-            dplyr::filter(as.Date(date) - as.Date(filter_dates[1])>= 0 & 
-                            as.Date(date) - as.Date(filter_dates[2])<= 0)
-          
-          exc_ratio <- sapply(sites_cWQ$site_id,
-                              function(x)
-                                sum(df_sub$avDayTemp[which(df_sub$site_id == x)] > threshold)
-                              / length(df_sub$avDayTemp[which(df_sub$site_id == x)]))
-          
-          return(colors_temp[signif(exc_ratio, 1) * 10 + 1])
-        }
-        if (input$temp_param == "avWeek") {
-          threshold <-
-            temp_thresholds[temp_thresholds$param == "avWeek", "thresh"]
-          
-          df_sub <- df_temp_MWAT %>%
-            filter(as.Date(day1week) - as.Date(filter_dates[1])>= 0 & 
-                     as.Date(day1week) - as.Date(filter_dates[2])<= 0)
-          
-          exc_ratio <- sapply(sites_cWQ$site_id,
-                              function(x)
-                                sum(df_sub$avWeek[which(df_sub$site_id == x)] > threshold)
-                              / length(df_sub$avWeek[which(df_sub$site_id == x)]))
-          
-          return(colors_temp[signif(exc_ratio, 1) * 10 + 1])
-        }
-      }
       
-      
-      
-      else
         return("black")
     }
     
@@ -1002,150 +964,13 @@ server <- (function(input, output, session) {
         color = get_color_wq(),
         popup = popup,
         options = leafletOptions(pane = "markers")
-      ) %>%
+      ) 
       #addLegendCustom(position="topright", colors=c("blue","orange","purple"),
       #               shapes = c("square", "circle", "triangle"),
       #              labels=c("Continuous WQ", "Continuous Temperature", "Both"),
       #             sizes=c(10,10,10), borders=rep(2,3))
-      addLegend(
-        "topleft",
-        title = "exceedance/record ratio",
-        colors = colors_temp,
-        labels = c(
-          "0",
-          "0-0.1",
-          "0.1-0.2",
-          "0.2-0.3",
-          "0.3-0.4",
-          "0.4-0.5",
-          "0.5-0.6",
-          "0.6-0.7",
-          "0.7-0.8",
-          "0.8-0.9",
-          "0.9-1.0"
-        )
-      )
-  })
-  
-  
-  time_plot_function <- function(data_sub_temp, param) {
-    if (nrow(data_sub_temp) > 0) {
-
-      #if (param== "ConTemp"){
-      # p <- ggplot(data=data_sub_temp, aes(x=date, y=ctemp_c, col=site_id)) + geom_line(size=0.3) + ylim(c(0,30))  + ylab("Temperature (\u00B0C)") + xlab("Date")  + scale_x_datetime(breaks=date_breaks("1 year"), labels=date_format("%b-%y")) +
-      #geom_hline(yintercept = 24, linetype=2, col = "red") +
-      #theme_bw()
-      #}
       
-      if (param == "avDayTemp") {
-        threshold <-
-          temp_thresholds[temp_thresholds$param == "avDayTemp", "thresh"]
-        
-        p <-
-          ggplot(data = data_sub_temp, aes(x = date, y = avDayTemp)) + geom_line(aes(col =
-                                                                                       site_id, group = grp))  +
-          ylim(c(0, 30))  + ylab("Average Daily Temperature (\u00B0C)") +
-          xlab("Date") +
-          theme_bw() +
-          geom_hline(yintercept = threshold,
-                     linetype = 2,
-                     col = "red") +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1))
-        
-      }
-      if (param == "avWeek") {
-        threshold <-
-          temp_thresholds[temp_thresholds$param == "avWeek", "thresh"]
-        
-        p <-
-          ggplot(data = data_sub_temp, aes(x = day1week, y = avWeek, col = site_id)) + geom_point(aes(shape =
-                                                                                                        site_id), size = 2) +
-          ylim(c(0, 30))  + ylab("MWAT (\u00B0C)") + xlab("Date") +
-          geom_hline(yintercept = threshold,
-                     linetype = 2,
-                     col = "red") +
-          scale_shape_manual(values = seq(1, 15, 1)) +
-          theme_bw() +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1))
-      }
       
-      return(p)
-    }
-    else {
-      NULL
-    }
-  }
-  
-  temp_timeseries_1 <- reactive({
-    filter_dates <- as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month"))
-    
-    
-    if (input$temp_param == "avDayTemp") {
-      data_sub_temp <- df_temp_7DAVG %>%
-        dplyr::filter(as.Date(date) - as.Date(filter_dates[1])>= 0 & 
-                        as.Date(date) - as.Date(filter_dates[2])<= 0,
-                      ws == input$wq_ws,
-                      plot_cat == 1)
-    }
-    if (input$temp_param == "avWeek") {
-      data_sub_temp <- df_temp_MWAT %>%
-        dplyr::filter(as.Date(day1week) - as.Date(filter_dates[1])>= 0 & 
-                        as.Date(day1week) - as.Date(filter_dates[2])<= 0,
-                      ws == input$wq_ws,
-                      plot_cat == 1)
-    }  
-    return(time_plot_function(data_sub_temp = data_sub_temp, param = input$temp_param) + 
-             scale_x_date(
-               date_breaks = "3 months",
-               labels = date_format("%b-%Y"),
-               date_minor_breaks = "1 month",
-               limits = filter_dates,
-               expand = c(0, 0)
-             ))
-
-  })
-  
-  temp_timeseries_2 <- reactive({
-    
-    filter_dates <- as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month"))
-    
-    if (input$temp_param == "avDayTemp") {
-      data_sub_temp <- df_temp_7DAVG %>%
-        dplyr::filter(as.Date(date) - as.Date(filter_dates[1])>= 0 & 
-                        as.Date(date) - as.Date(filter_dates[2])<= 0,
-                      ws == input$wq_ws,
-                      plot_cat == 2)
-      }
-    if (input$temp_param == "avWeek") {
-      data_sub_temp <- df_temp_MWAT %>%
-        dplyr::filter(as.Date(day1week) - as.Date(filter_dates[1])>= 0 & 
-                        as.Date(day1week) - as.Date(filter_dates[2])<= 0,
-                      ws == input$wq_ws,
-                      plot_cat == 2)
-      
-    }
-    p <-
-        time_plot_function(data_sub_temp = data_sub_temp, param = input$temp_param) + 
-      scale_x_date(
-        date_breaks = "3 months",
-        labels = date_format("%b-%Y"),
-        date_minor_breaks = "1 month",
-        limits = filter_dates,
-        expand = c(0, 0)
-      )
-    
-    return(p )
-  })
-  
-  
-  
-  output$temp_timeseries_1 <- renderPlot({
-    p <- temp_timeseries_1()
-    return(p)
-  })
-  output$temp_timeseries_2 <- renderPlot({
-    p <- temp_timeseries_2()
-    return(p)
   })
   
   
@@ -1277,6 +1102,245 @@ server <- (function(input, output, session) {
       )
     )
   })
+  
+  
+ 
+# Continuous Temperature 
+#################################################################################################################################
+  
+  # update inputs - sub-watersheds - sites
+  
+  
+  output$map_temp <-  renderLeaflet({
+    leaflet() %>%
+      addProviderTiles(providers$Esri.WorldTopoMap) %>%
+      setView(lng = -122,
+              lat = 37.3,
+              zoom = 9) %>%
+      addMapPane(name = "polygons", zIndex = 410) %>%
+      addMapPane(name = "markers", zIndex = 420)
+  })
+  
+  # update based on user input
+  observe({
+    req(input$menu_items == "con_temp")
+    
+    # get dates
+    filter_dates <- as.Date(cut(as.POSIXct(input$temp_dates,tz=''),"month"))
+    
+    popup_temp <- paste(
+      sep = "<br/>",
+      "<b>Site:</b>",
+      sites_cWQ$site_id,
+      "<b>Watershed:</b>",
+      sites_cWQ$ws
+    )
+    
+    get_color_temp <- function() {
+        if (input$temp_param == "avDayTemp") {
+     
+          df_sub <- df_temp_7DAVG %>%
+            dplyr::filter(as.Date(date) - as.Date(filter_dates[1])>= 0 & 
+                            as.Date(date) - as.Date(filter_dates[2])<= 0)
+          
+          temp_cat <- sapply(sites_cWQ$site_id,
+                              function(x)
+                                (mean(df_sub$avDayTemp[which(df_sub$site_id == x)])-13)/(21-13))
+
+          return(colors_temp[signif(temp_cat, 1) * 10 + 1])
+        }
+        if (input$temp_param == "avWeek") {
+   
+          df_sub <- df_temp_MWAT %>%
+            filter(as.Date(day1week) - as.Date(filter_dates[1])>= 0 & 
+                     as.Date(day1week) - as.Date(filter_dates[2])<= 0)
+          
+          temp_cat <- sapply(sites_cWQ$site_id,
+                              function(x)
+                                (mean(df_sub$avWeek[which(df_sub$site_id == x)])-13)/(21-13))
+
+          
+          return(colors_temp[signif(temp_cat, 1) * 10 + 1])
+        
+      }
+      
+      else return("black")
+      
+     
+    }
+    
+    
+    get_weight_temp <- function() {
+      return(sapply(sheds$SYSTEM, function(x) {
+        if (x == input$temp_ws) {
+          5
+        } else{
+          1
+        }
+      }))
+    }
+    
+    #shapes: 15 = square, 16= circle, 17 = triangle
+    leafletProxy("map_temp")  %>% clearMarkers() %>% clearShapes() %>% clearControls() %>%
+      addPolygons(
+        data = sheds,
+        layerId = sheds$SYSTEM,
+        weight = get_weight_temp(),
+        smoothFactor = 0.5,
+        opacity = 0.6,
+        fill = T,
+        fillOpacity = 0.1,
+        label = sheds$SYSTEM,
+        highlightOptions = highlightOptions(
+          color = "white",
+          weight = 3,
+          bringToFront = TRUE
+        ),
+        options = leafletOptions(pane = "polygons")
+      ) %>%
+      #addCustomMarkers(data= sites_cWQ, lng=sites_cWQ$long, lat=sites_cWQ$lat,
+      #                size=20, bg = c("blue", "orange","purple"),
+      #               shapes=c(21,22,24), icon_group = sites_cWQ$marker_group,
+      #              popup = popup) %>%
+      addCircleMarkers(
+        data = sites_cWQ,
+        lng = sites_cWQ$long,
+        lat = sites_cWQ$lat,
+        radius = 5,
+        opacity = 1,
+        fillOpacity = 0.8,
+        color = get_color_temp(),
+        popup = popup_temp,
+        options = leafletOptions(pane = "markers")
+      )      #addLegendCustom(position="topright", colors=c("blue","orange","purple"),
+      #               shapes = c("square", "circle", "triangle"),
+      #              labels=c("Continuous WQ", "Continuous Temperature", "Both"),
+      #             sizes=c(10,10,10), borders=rep(2,3))
+      
+      
+  })
+  
+  
+  time_plot_function <- function(data_sub_temp, param) {
+    if (nrow(data_sub_temp) > 0) {
+      
+      #if (param== "ConTemp"){
+      # p <- ggplot(data=data_sub_temp, aes(x=date, y=ctemp_c, col=site_id)) + geom_line(size=0.3) + ylim(c(0,30))  + ylab("Temperature (\u00B0C)") + xlab("Date")  + scale_x_datetime(breaks=date_breaks("1 year"), labels=date_format("%b-%y")) +
+      #geom_hline(yintercept = 24, linetype=2, col = "red") +
+      #theme_bw()
+      #}
+      
+      if (param == "avDayTemp") {
+        threshold <-
+          temp_thresholds[temp_thresholds$param == "avDayTemp", "thresh"]
+        
+        p <-
+          ggplot(data = data_sub_temp, aes(x = date, y = avDayTemp)) + geom_line(aes(col =
+                                                                                       site_id, group = grp))  +
+          ylim(c(0, 30))  + ylab("Average Daily Temperature (\u00B0C)") +
+          xlab("Date") +
+          theme_bw() +
+          geom_hline(yintercept = threshold,
+                     linetype = 2,
+                     col = "red") +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1))
+        
+      }
+      if (param == "avWeek") {
+        threshold <-
+          temp_thresholds[temp_thresholds$param == "avWeek", "thresh"]
+        
+        p <-
+          ggplot(data = data_sub_temp, aes(x = day1week, y = avWeek, col = site_id)) + geom_point(aes(shape =
+                                                                                                        site_id), size = 2) +
+          ylim(c(0, 30))  + ylab("MWAT (\u00B0C)") + xlab("Date") +
+          geom_hline(yintercept = threshold,
+                     linetype = 2,
+                     col = "red") +
+          scale_shape_manual(values = seq(1, 15, 1)) +
+          theme_bw() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1))
+      }
+      
+      return(p)
+    }
+    else {
+      NULL
+    }
+  }
+  
+  temp_timeseries_1 <- reactive({
+    filter_dates <- as.Date(cut(as.POSIXct(input$temp_dates,tz=''),"month"))
+    
+    
+    if (input$temp_param == "avDayTemp") {
+      data_sub_temp <- df_temp_7DAVG %>%
+        dplyr::filter(as.Date(date) - as.Date(filter_dates[1])>= 0 & 
+                        as.Date(date) - as.Date(filter_dates[2])<= 0,
+                      ws == input$temp_ws,
+                      plot_cat == 1)
+    }
+    if (input$temp_param == "avWeek") {
+      data_sub_temp <- df_temp_MWAT %>%
+        dplyr::filter(as.Date(day1week) - as.Date(filter_dates[1])>= 0 & 
+                        as.Date(day1week) - as.Date(filter_dates[2])<= 0,
+                      ws == input$temp_ws,
+                      plot_cat == 1)
+    }  
+    return(time_plot_function(data_sub_temp = data_sub_temp, param = input$temp_param) + 
+             scale_x_date(
+               date_breaks = "3 months",
+               labels = date_format("%b-%Y"),
+               date_minor_breaks = "1 month",
+               limits = filter_dates,
+               expand = c(0, 0)
+             ))
+    
+  })
+  
+  temp_timeseries_2 <- reactive({
+    
+    filter_dates <- as.Date(cut(as.POSIXct(input$temp_dates,tz=''),"month"))
+    
+    if (input$temp_param == "avDayTemp") {
+      data_sub_temp <- df_temp_7DAVG %>%
+        dplyr::filter(as.Date(date) - as.Date(filter_dates[1])>= 0 & 
+                        as.Date(date) - as.Date(filter_dates[2])<= 0,
+                      ws == input$temp_ws,
+                      plot_cat == 2)
+    }
+    if (input$temp_param == "avWeek") {
+      data_sub_temp <- df_temp_MWAT %>%
+        dplyr::filter(as.Date(day1week) - as.Date(filter_dates[1])>= 0 & 
+                        as.Date(day1week) - as.Date(filter_dates[2])<= 0,
+                      ws == input$temp_ws,
+                      plot_cat == 2)
+      
+    }
+    p <-
+      time_plot_function(data_sub_temp = data_sub_temp, param = input$temp_param) + 
+      scale_x_date(
+        date_breaks = "3 months",
+        labels = date_format("%b-%Y"),
+        date_minor_breaks = "1 month",
+        limits = filter_dates,
+        expand = c(0, 0)
+      )
+    
+    return(p )
+  })
+  
+  
+  
+  output$temp_timeseries_1 <- renderPlot({
+    p <- temp_timeseries_1()
+    return(p)
+  })
+  output$temp_timeseries_2 <- renderPlot({
+    p <- temp_timeseries_2()
+    return(p)
+  })
+  
   
   
   

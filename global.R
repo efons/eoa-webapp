@@ -36,6 +36,7 @@ library(beanplot)
 library(rsconnect)
 library(DT)
 library(shinyjs)
+library(viridis)
 
 # packageDescription("shinyjs", fields="License")
 # Check license status 
@@ -261,7 +262,7 @@ MRP_threshold <- data.frame(param = c("temp_c", "ph","sp_cond_us_cm" ,"do_mg_l")
 temp_thresholds <- data.frame(param=c("conTemp",'avDayTemp', "maxDayTemp", "avWeek", "maxWeek"), 
                               thresh=c(24,17,20,17,21)) # CHECK THRESHOLD VALUES
 
-colors_temp <- colorRampPalette(c("blue","seagreen", "orange", "red"))(11)
+colors_temp <- colorRampPalette(c("yellow", "orange", "red", "purple"))(11)
 
 
 
