@@ -170,7 +170,7 @@ Explore data, maps, graphs and interactive features as they become available."),
                  downloadButton("downloadData", label = "Data"),
                      # Input: Choose file type ----
                 radioButtons("file_type", NULL, inline = T,
-                                  choices = c(".csv", ".xlsx"))
+                                  choices = c(".csv", ".xlsx", ".shp"))
                   
                      
                 )
@@ -413,12 +413,6 @@ tabItem(tabName="con_temp",
                 timeFormat= "%b %Y"
               ),
               selectInput(
-                inputId = "temp_ws",
-                label = "Watershed:",
-                choices = as.character(wq_vars_ws),
-                selected = as.character(wq_vars_ws[1])
-              ),
-              selectInput(
                 inputId = "temp_param",
                 label = "Parameter:",
                 choices = c(
@@ -441,6 +435,12 @@ tabItem(tabName="con_temp",
         # Plot Outputs
         box(width=12,
         id = "con_temp_plot",
+        selectInput(
+          inputId = "temp_ws",
+          label = "Watershed:",
+          choices = as.character(wq_vars_ws),
+          selected = as.character(wq_vars_ws[1])
+        ),
         plotOutput("temp_timeseries_1"),
         plotOutput("temp_timeseries_2"))),
 

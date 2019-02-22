@@ -138,7 +138,7 @@ server <- (function(input, output, session) {
             "Creek",
             "Year",
             filter_name,
-            size_name)
+            size_name )
       }
     
     
@@ -318,25 +318,65 @@ server <- (function(input, output, session) {
   
   
   
+  # create shapefile for download 
+  bio_shp <- reactive({
+    data <- data_sub() %>% 
+      dplyr::select(1:6,8) %T>% 
+    {names(.) <- c("rmc_id", "ws", "subws", "creek", "year", input$filter_by, input$size_by)} %>% 
+      dplyr::arrange(rmc_id)
+  
+    sites_slct <- data$rmc_id
+    sites_sub <- sites %>% 
+      dplyr::select(2:7) %>% 
+      dplyr::filter(rmc_id %in% sites_slct) %>% 
+      dplyr::arrange(rmc_id) 
+    
+    xyPoints <- merge(sites_sub,data)
+    SHP <- SpatialPointsDataFrame(coords= xyPoints[,5:6], data =  xyPoints)
+    proj4string(SHP) <- CRS("+init=epsg:4326")
+    
+    return(SHP)
+    
+    
+  })
+  
+  
   # Downloadable user selected file type of selected dataset ----
-
   output$downloadData <- downloadHandler(
-    filename = function() {
-      paste(input$spatial_filter, "_table", Sys.Date(), input$file_type, sep = "")
+    filename = function() { 
+      
+      if (!input$file_type == ".shp"){
+              paste(input$spatial_filter, "_table", Sys.Date(), input$file_type, sep = "")
+      }
+      else {paste0("shpExport.zip")} 
     },
  #   content = function(file) {
 #      write.xlsx(data_sub(), file)
  #   }
     
     content = function(file) {
+      
        if(input$file_type== ".csv") {
         write.csv(data_sub(), file, row.names = FALSE)
       } else if(input$file_type == ".xlsx") {
         write.xlsx(data_sub(), file)
       }
+      if (input$file_type == ".shp"){
+        if (length(Sys.glob("shpExport.*"))>0){
+          file.remove(Sys.glob("shpExport.*"))
+        }
+        writeOGR(bio_shp(), dsn="shpExport.shp", layer="shpExport", driver="ESRI Shapefile")
+        zip(zipfile='shpExport.zip', files=Sys.glob("shpExport.*"),zip = Sys.getenv("R_ZIPCMD", "zip"))
+        file.copy("shpExport.zip", file)
+        if (length(Sys.glob("shpExport.*"))>0){
+          file.remove(Sys.glob("shpExport.*"))
+        }
+      }
+      
     }
   
   )
+  
   
   
   # Summary barplot 
@@ -923,25 +963,27 @@ server <- (function(input, output, session) {
     popup <- paste(
       sep = "<br/>",
       "<b>Site:</b>",
-      sites_cWQ$site_id,
+      sites_cWQ_mapWQ$site_id,
       "<b>Watershed:</b>",
-      sites_cWQ$ws
+      sites_cWQ_mapWQ$ws
     )
     
     get_color_wq <- function(site_id) {
       data_sub_wq <- wq_data_sub()    
-    
-      threshold <-
+     
+       threshold <-
         MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_sup']
       threshold_inf <-  MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_inf']
       
       color_cat <- sapply(site_id,
-                         function(x)
+                         function(x) 
                            (sum(data_sub_wq[which(data_sub_wq$site_id == x),ncol(data_sub_wq)]<threshold_inf |
                                   data_sub_wq[which(data_sub_wq$site_id == x),ncol(data_sub_wq)]>threshold )/
-                           length(data_sub_wq[which(data_sub_wq$site_id == x),ncol(data_sub_wq)])))
+                           length(data_sub_wq[which(data_sub_wq$site_id == x),ncol(data_sub_wq)]))
+                         )
       
         return(colors_wq[signif(color_cat,1)*10+1])
+     
     }
     
     
@@ -1166,9 +1208,9 @@ server <- (function(input, output, session) {
     popup_temp <- paste(
       sep = "<br/>",
       "<b>Site:</b>",
-      sites_cWQ$site_id,
+      sites_cWQ_maptemp$site_id,
       "<b>Watershed:</b>",
-      sites_cWQ$ws
+      sites_cWQ_maptemp$ws
     )
     
     get_color_temp <- function(site_id) {
