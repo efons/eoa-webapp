@@ -31,12 +31,8 @@ library(rgdal)
 library(lubridate)
 library(stringr)
 library(scales)
-library(latex2exp)
 library(beanplot)
-library(rsconnect)
 library(DT)
-library(shinyjs)
-library(viridis)
 
 # packageDescription("shinyjs", fields="License")
 # Check license status 
@@ -257,12 +253,14 @@ wq_colors <- rainbow(12)
 # Important data 
 MRP_threshold <- data.frame(param = c("temp_c", "ph","sp_cond_us_cm" ,"do_mg_l"),
                             label = c("Temperature (\u00B0C)", "pH", "Specific Conductivity ($\\mu$S/cm)", "Dissolved Oxygen (mg/L)"), 
-                            value_inf = c(NA,6.5,NA,5), value_sup = c(24,8.5,2000,7), 
-                            units = c("oC", "","uS/cm","mg/L"))
+                            value_inf = c(-1,6.5,-1,5), value_sup = c(24,8.5,2000,7), 
+                            units = c("oC", "","uS/cm","mg/L"),
+                            lim_sup = c(30,10,2500,12.5))
 temp_thresholds <- data.frame(param=c("conTemp",'avDayTemp', "maxDayTemp", "avWeek", "maxWeek"), 
                               thresh=c(24,17,20,17,21)) # CHECK THRESHOLD VALUES
 
 colors_temp <- colorRampPalette(c("yellow", "orange", "red", "purple"))(11)
+colors_wq <- colorRampPalette(c("blue","green", "orange", "red"))(11)
 
 
 

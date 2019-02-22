@@ -24,48 +24,52 @@ server <- (function(input, output, session) {
       easyClose = TRUE, footer=modalButton("Got it!")
     ))
   })
-
   
-  # Score description 
+  score_desc_txt <- reactive({
+    score <- input$filter_by 
+    score_name <- bio_vars_filter[which(bio_vars_filter$param == score),"name"]
     
-    output$score_desc_txt <- renderText({
-      score <- input$filter_by 
-      score_name <- bio_vars_filter[which(bio_vars_filter$param == score),"name"]
-      
-      description <- if (score == "csci") {"CSCI stands for California Stream Condition Index. This
-        index was developed in ... by ... to .... Values of this index are computed based on ... and thus
-        represent .... The values range from 0 to 1, 0 representing the worst score, and 1 the best score.
-        See the table to the left for a more detailed presentation of CSCI score breaks"}
-      
-      paste0(description)
+    description <- if (score == "csci") {"CSCI stands for California Stream Condition Index. This
+      index was developed in ... by ... to .... Values of this index are computed based on ... and thus
+      represent .... The values range from 0 to 1, 0 representing the worst score, and 1 the best score.
+      See the table to the left for a more detailed presentation of CSCI score breaks"}
+    
+    paste0(description)
     })
+  
+  score_desc_table <- reactive({
+    df <- bio_vars_filter %>% dplyr::filter(param == input$filter_by) %>% 
+      dplyr::select(seq(3,6)) %T>% 
+      {names(.) <- c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered")} %>% t()
     
-    output$score_desc <- DT::renderDataTable({
-      df <- bio_vars_filter %>% dplyr::filter(param == input$filter_by) %>% 
-        dplyr::select(seq(3,6)) %T>% 
-        {names(.) <- c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered")} %>% t()
-      
-      df[1,] <- paste(df[1,], " - ", df[2,])
-      df[2,] <- paste(df[2,], " - ", df[3,])
-      df[3,] <- paste(df[3,], " - ", df[4,])
-      df[4,] <- paste(" > ", df[4,])
-      
-      
-      
-      
-      col=c(1,2,3,4)
-      name <- as.character(bio_vars_filter[bio_vars_filter$param == input$filter_by,'name'])
-      df <- data.frame(df, colors=col) 
-      colnames(df) <-c(name,"colors")
-      
-      
-      df <- df %>% datatable(options = list(autoWidth=F,columnDefs = list(list(targets=2, visible=F)), dom='t', bSort=F)) %>% 
-        formatStyle(1,2,backgroundColor=styleEqual(col,colors_bio[col]), color=styleEqual(col,c(rep("black",3),"white"))) %>%
-        formatStyle( 0, target= 'row',lineHeight='70%')
+    df[1,] <- paste(df[1,], " - ", df[2,])
+    df[2,] <- paste(df[2,], " - ", df[3,])
+    df[3,] <- paste(df[3,], " - ", df[4,])
+    df[4,] <- paste(" > ", df[4,])
 
-      return(df)
+    
+    col=c(1,2,3,4)
+    name <- as.character(bio_vars_filter[bio_vars_filter$param == input$filter_by,'name'])
+    df <- data.frame(df, colors=col) 
+    colnames(df) <-c(name,"colors")
+    
+    
+    df <- df %>% datatable(options = list(autoWidth=F,columnDefs = list(list(targets=2, visible=F)), dom='t', bSort=F)) %>% 
+      formatStyle(1,2,backgroundColor=styleEqual(col,colors_bio[col]), color=styleEqual(col,c(rep("black",3),"white"))) %>%
+      formatStyle( 0, target= 'row',lineHeight='70%')
+    
+    return(df)
   })
   
+  observeEvent(input$score_popup,{
+    showModal(modalDialog(
+      title = "Score Description",
+      score_desc_txt(),
+      DT::renderDataTable( score_desc_table()),
+      easyClose = TRUE, footer=modalButton("Got it!")
+      ))
+  })
+
     
     
 
@@ -898,16 +902,24 @@ server <- (function(input, output, session) {
               lat = 37.3,
               zoom = 9) %>%
       addMapPane(name = "polygons", zIndex = 410) %>%
-      addMapPane(name = "markers", zIndex = 420)
+      addMapPane(name = "markers", zIndex = 420) %>% 
+      addLegend("topright", title="% above limit", colors=colors_wq, labels=c("0","0-10", "10-20", "20-30",
+                                                       "30-40", "40-50", "50-60",
+                                                       "60-70", "70-80", "80-90",
+                                                       "90-100"))
   })
   
   # update based on user input
   observe({
     req(input$menu_items == "con_wq")
     
+    sites_cWQ_mapWQ <- sites_cWQ %>% 
+      dplyr::filter(wq_TF == T)
+    
   # get dates
     filter_dates <- as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month"))
     
+
     popup <- paste(
       sep = "<br/>",
       "<b>Site:</b>",
@@ -916,13 +928,25 @@ server <- (function(input, output, session) {
       sites_cWQ$ws
     )
     
-    get_color_wq <- function() {
+    get_color_wq <- function(site_id) {
+      data_sub_wq <- wq_data_sub()    
+      data_sub_wq <- df_wq %>% 
+        dplyr::filter()
+      threshold <-
+        MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_sup']
+      threshold_inf <-  MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_inf']
       
-        return("black")
+      color_cat <- sapply(site_id,
+                         function(x)
+                           (sum(data_sub_wq[which(data_sub_wq$site_id == x),ncol(data_sub_wq)]<threshold_inf |
+                                  data_sub_wq[which(data_sub_wq$site_id == x),ncol(data_sub_wq)]>threshold )/
+                           length(data_sub_wq[which(data_sub_wq$site_id == x),ncol(data_sub_wq)])))
+      
+        return(colors_wq[signif(color_cat,1)*10+1])
     }
     
     
-    get_weight <- function() {
+    get_weight <- function() { 
       return(sapply(sheds$SYSTEM, function(x) {
         if (x == input$wq_ws) {
           5
@@ -933,7 +957,7 @@ server <- (function(input, output, session) {
     }
     
     #shapes: 15 = square, 16= circle, 17 = triangle
-    leafletProxy("map_wq")  %>% clearMarkers() %>% clearShapes() %>% clearControls() %>%
+    leafletProxy("map_wq")  %>% clearMarkers() %>% clearShapes()  %>%
       addPolygons(
         data = sheds,
         layerId = sheds$SYSTEM,
@@ -955,13 +979,13 @@ server <- (function(input, output, session) {
       #               shapes=c(21,22,24), icon_group = sites_cWQ$marker_group,
       #              popup = popup) %>%
       addCircleMarkers(
-        data = sites_cWQ,
-        lng = sites_cWQ$long,
-        lat = sites_cWQ$lat,
+        data = sites_cWQ_mapWQ,
+        lng = sites_cWQ_mapWQ$long,
+        lat = sites_cWQ_mapWQ$lat,
         radius = 5,
         opacity = 1,
         fillOpacity = 0.8,
-        color = get_color_wq(),
+        color = get_color_wq(sites_cWQ_mapWQ$site_id),
         popup = popup,
         options = leafletOptions(pane = "markers")
       ) 
@@ -988,7 +1012,8 @@ server <- (function(input, output, session) {
         if (nrow(data_sub_wq) > 0) {
           threshold <-
             MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_sup']
-          
+          threshold_inf <-  MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_inf']
+          lim_sup <- MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'lim_sup']
           df_tempo <-
             data.frame(x_var = as.factor(data_sub_wq[, which(colnames(data_sub_wq) ==
                                                                x_param)]),
@@ -1000,17 +1025,25 @@ server <- (function(input, output, session) {
                                                                                 rgb(0, 0, 1, 0.6)) +
             theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
             xlab(x_param) + ylab(colnames(data_sub_wq)[ncol(data_sub_wq)]) +
+            ylim(c(0,lim_sup))+ 
             geom_hline(
               yintercept = threshold,
               lty = 2,
               col = "red",
               lwd = 1
             ) +
+        
+            geom_hline(
+              yintercept = threshold_inf,
+              lty = 2,
+              col = "red",
+              lwd = 1
+            ) + 
             stat_summary(
               fun.data = give_tot,
               geom = "text",
               fun.y = median,
-              position = position_dodge(width = 0.75)
+              position = position_dodge(width = 1)
             )
           
           return(p)
@@ -1024,17 +1057,16 @@ server <- (function(input, output, session) {
     filter_dates <- as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month"))
     
     param <- input$wq_param
-    season <- input$wq_season
+    season <- if(input$wq_season == "S_F") {c("S","F")} else {input$wq_season}
     ws <- input$wq_ws
-    season <- input$wq_season
+    season_input <- input$wq_season
     
     data_sub_wq <- df_wq %>%
       dplyr::filter(
         as.Date(date) - as.Date(filter_dates[1])>= 0 & 
           as.Date(date) - as.Date(filter_dates[2])<= 0,
-        ws %in% input$wq_ws,
-        season == input$wq_season
-      )
+        ws %in% input$wq_ws) %>% 
+      dplyr::filter(if(input$wq_season == "S_F") {season %in% c("S","F")} else season %in% input$wq_season )
     
     data_sub_wq <-
       cbind(data_sub_wq, data_sub_wq[, which(colnames(data_sub_wq) == param)])
@@ -1118,7 +1150,8 @@ server <- (function(input, output, session) {
               lat = 37.3,
               zoom = 9) %>%
       addMapPane(name = "polygons", zIndex = 410) %>%
-      addMapPane(name = "markers", zIndex = 420)
+      addMapPane(name = "markers", zIndex = 420) %>% 
+      addLegend("topright", title= NULL, colors=colors_temp[c(1,3,5,7,9,11)], labels=c("Colder",rep("",4),"Warmer"))
   })
   
   # update based on user input
@@ -1128,6 +1161,9 @@ server <- (function(input, output, session) {
     # get dates
     filter_dates <- as.Date(cut(as.POSIXct(input$temp_dates,tz=''),"month"))
     
+    sites_cWQ_maptemp <- sites_cWQ %>%
+      dplyr::filter(ctemp_TF == T)
+    
     popup_temp <- paste(
       sep = "<br/>",
       "<b>Site:</b>",
@@ -1136,14 +1172,14 @@ server <- (function(input, output, session) {
       sites_cWQ$ws
     )
     
-    get_color_temp <- function() {
+    get_color_temp <- function(site_id) {
         if (input$temp_param == "avDayTemp") {
      
           df_sub <- df_temp_7DAVG %>%
             dplyr::filter(as.Date(date) - as.Date(filter_dates[1])>= 0 & 
                             as.Date(date) - as.Date(filter_dates[2])<= 0)
           
-          temp_cat <- sapply(sites_cWQ$site_id,
+          temp_cat <- sapply(site_id,
                               function(x)
                                 (mean(df_sub$avDayTemp[which(df_sub$site_id == x)])-13)/(21-13))
 
@@ -1181,7 +1217,7 @@ server <- (function(input, output, session) {
     }
     
     #shapes: 15 = square, 16= circle, 17 = triangle
-    leafletProxy("map_temp")  %>% clearMarkers() %>% clearShapes() %>% clearControls() %>%
+    leafletProxy("map_temp")  %>% clearMarkers() %>% clearShapes() %>%
       addPolygons(
         data = sheds,
         layerId = sheds$SYSTEM,
@@ -1203,13 +1239,13 @@ server <- (function(input, output, session) {
       #               shapes=c(21,22,24), icon_group = sites_cWQ$marker_group,
       #              popup = popup) %>%
       addCircleMarkers(
-        data = sites_cWQ,
-        lng = sites_cWQ$long,
-        lat = sites_cWQ$lat,
+        data = sites_cWQ_maptemp,
+        lng = sites_cWQ_maptemp$long,
+        lat = sites_cWQ_maptemp$lat,
         radius = 5,
         opacity = 1,
         fillOpacity = 0.8,
-        color = get_color_temp(),
+        color = get_color_temp(sites_cWQ_maptemp$site_id),
         popup = popup_temp,
         options = leafletOptions(pane = "markers")
       )      #addLegendCustom(position="topright", colors=c("blue","orange","purple"),

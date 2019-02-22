@@ -65,7 +65,6 @@ ui_db <- dashboardPage(
             #.#tabBox { height:450px;margin:2px; padding=0px}
       # to reduce margins between boxes? 
 
-shinyjs::useShinyjs(),
 
 tabItems(
   tabItem(
@@ -96,12 +95,7 @@ Explore data, maps, graphs and interactive features as they become available."),
     h2("Biological Condition Assessment"),
  
       # Box for score choice
-      tabBox(
-        width = 12,
-        height= 220,
-
-        tabPanel(title="Score Selection",
-        
+     box(width=12,
         div(style = "font-weight:bold; color:orange; text-align:center",
             fluidRow(
               h4(" Explore Creek Health Scores in the Santa Clara Basin")
@@ -121,19 +115,12 @@ Explore data, maps, graphs and interactive features as they become available."),
             selected = "csci",
             multiple=F
           ), offset=4
-        )
+        ),
+        tags$div(title="Click here for description",actionLink(inputId="score_popup", label="What is this?", icon=NULL))
+        
 
       ),
       
-      
-      tabPanel(title="Score Description",
-               
-               column(6,dataTableOutput("score_desc")),
-               column(6, br(), br(), textOutput(outputId="score_desc_txt"))
-
-               )),
-    
-   
     
     
       # Filter inputs
@@ -367,7 +354,28 @@ tabItem(
         label = "Watershed:",
         choices = as.character(wq_vars_ws),
         selected = as.character(wq_vars_ws[1])
-      )
+      ),
+      
+   
+        selectInput(
+          inputId = "wq_param",
+          label = "Water Quality Parameter:",
+          choices = c(
+            "Temperature" = "temp_c",
+            "pH" = "ph" ,
+            "Specific Conductivity" = "sp_cond_us_cm",
+            "Dissolved Oxygen" = "do_mg_l"
+          ),
+          selected = 'ph'
+        ),
+        selectInput(
+          inputId = "wq_season",
+          label = "Season:",
+          choices = c("Spring" = "S", "Fall" =
+                        "F", 
+                      "Spring and Fall" = "S_F"),
+          selected = "S_F"
+        )
     ),
     #box for map
     box(width = 8, leafletOutput("map_wq"))
@@ -377,30 +385,6 @@ tabItem(
   fluidRow(
     box(
       width = 12,
-        fluidRow(column(
-          3,
-          selectInput(
-            inputId = "wq_param",
-            label = "Water Quality Parameter:",
-            choices = c(
-              "Temperature" = "temp_c",
-              "pH" = "ph" ,
-              "Specific Conductivity" = "sp_cond_us_cm",
-              "Dissolved Oxygen" = "do_mg_l"
-            ),
-            selected = 'ph'
-          )
-        ),
-        column(
-          3,
-          selectInput(
-            inputId = "wq_season",
-            label = "Season:",
-            choices = c("Spring" = "S", "Fall" =
-                          "F"),
-            selected = "S"
-          )
-        )),
         fluidRow(
           column(6, plotOutput("wq_boxplot_1"),
                  plotOutput("wq_boxplot_2")),
@@ -433,27 +417,30 @@ tabItem(tabName="con_temp",
                 label = "Watershed:",
                 choices = as.character(wq_vars_ws),
                 selected = as.character(wq_vars_ws[1])
+              ),
+              selectInput(
+                inputId = "temp_param",
+                label = "Parameter:",
+                choices = c(
+                  "Continuous Temperature" = "ConTemp",
+                  "Daily Average" = "avDayTemp",
+                  "Daily Max" = "maxDayTemp",
+                  "Weekly Average" = "avWeek",
+                  "Weekly Maximum" = "maxWeek"
+                ),
+                selected = "avDayTemp"
               )
+              
+              
+              
           ),
           #box for map
           box(width = 8, leafletOutput("map_temp"))
         ),
         
         # Plot Outputs
-        box(
+        box(width=12,
         id = "con_temp_plot",
-        selectInput(
-          inputId = "temp_param",
-          label = "Parameter:",
-          choices = c(
-            "Continuous Temperature" = "ConTemp",
-            "Daily Average" = "avDayTemp",
-            "Daily Max" = "maxDayTemp",
-            "Weekly Average" = "avWeek",
-            "Weekly Maximum" = "maxWeek"
-          ),
-          selected = "avDayTemp"
-        ),
         plotOutput("temp_timeseries_1"),
         plotOutput("temp_timeseries_2"))),
 
