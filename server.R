@@ -930,8 +930,7 @@ server <- (function(input, output, session) {
     
     get_color_wq <- function(site_id) {
       data_sub_wq <- wq_data_sub()    
-      data_sub_wq <- df_wq %>% 
-        dplyr::filter()
+    
       threshold <-
         MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_sup']
       threshold_inf <-  MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_inf']
