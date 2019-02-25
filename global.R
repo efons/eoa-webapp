@@ -187,7 +187,13 @@ sites_char$ws <- mapvalues(sites_char$ws, from = unique(sites_char$ws), to=c("Co
 df_wq <- read_excel("data_master_wq_2012_18.xlsx", sheet= "SC WQ ALL") %>%
   mutate(year = year(date)) %>%
   mutate(season = factor(ifelse((month(date) == 5 | month(date) == 6 | month(date) == 7), "S", "F"), levels=c("S", "F"))) %>% 
-  mutate(ws = sites_char[match(site_id,sites_char$`Station Number`),"ws"]$ws) %>% 
+  mutate(ws = sites_char[match(site_id,sites_char$`Station Number`),"ws"]$ws, 
+         creek= sites_char[match(site_id,sites_char$`Station Number`),"creek"]$creek) %>% 
+  mutate(temp_c = ifelse(str_detect(comment, "malfunction"), NA, temp_c),
+         ph = ifelse(str_detect(comment, "malfunction") | str_detect(comment, "pH"), NA, ph),
+         sp_cond_us_cm = ifelse(str_detect(comment, "malfunction") | str_detect(comment, "SpCond"), NA, sp_cond_us_cm),
+         do_mg_l = ifelse(str_detect(comment, "malfunction") | str_detect(comment, "DO"), NA, do_mg_l),
+         do_pct = ifelse(str_detect(comment, "malfunction") | str_detect(comment, "DO"), NA, do_pct)) %>% 
   arrange(year)
 
 
@@ -195,6 +201,7 @@ df_temp <-  read_excel("data_master_wq_2012_18.xlsx", sheet= "SC ConTemp", col_t
   mutate(year =year(date)) %>% # make factor or ordered num 
   arrange(year) %>% 
   mutate(ws = sites_char[match(site_id,sites_char$`Station Number`),"ws"]$ws,
+         creek= sites_char[match(site_id,sites_char$`Station Number`),"creek"]$creek,
          ctemp_c =as.numeric(ctemp_c))
 
 
@@ -206,6 +213,7 @@ sites_cWQ <- data.frame(site_id = all_sites_wq,
                         lat= sites_char[match(all_sites_wq,sites_char$`Station Number`),"lat"],
                         long= sites_char[match(all_sites_wq,sites_char$`Station Number`),"long"],
                         ws = sites_char[match(all_sites_wq,sites_char$`Station Number`),"ws"],
+                        sub_ws = sites_char[match(all_sites_wq,sites_char$`Station Number`),"creek"],
                         wq_TF = all_sites_wq %in% unique(df_wq$site_id),
                         ctemp_TF = all_sites_wq %in% unique(df_temp$site_id),
                         both_TF = all_sites_wq %in% unique(df_wq$site_id) & all_sites_wq %in% unique(df_temp$site_id)) %>% 
@@ -253,7 +261,7 @@ wq_colors <- rainbow(12)
 # Important data 
 MRP_threshold <- data.frame(param = c("temp_c", "ph","sp_cond_us_cm" ,"do_mg_l"),
                             label = c("Temperature (\u00B0C)", "pH", "Specific Conductivity ($\\mu$S/cm)", "Dissolved Oxygen (mg/L)"), 
-                            value_inf = c(-1,6.5,-1,5), value_sup = c(24,8.5,2000,7), 
+                            value_inf = c(-1,6.5,-1,7), value_sup = c(24,8.5,2000,1000), 
                             units = c("oC", "","uS/cm","mg/L"),
                             lim_sup = c(30,10,2500,12.5))
 temp_thresholds <- data.frame(param=c("conTemp",'avDayTemp', "maxDayTemp", "avWeek", "maxWeek"), 
@@ -267,9 +275,9 @@ colors_wq <- colorRampPalette(c("blue","green", "orange", "red"))(11)
 # temperature calculations 
 df_temp_MWAT <- df_temp %>%  
 dplyr::mutate(day1week= as.Date(cut(date, "week"))) %>%
-  dplyr::group_by(year,ws, plot_cat,site_id, day1week) %>% dplyr::summarize(avWeek= mean(ctemp_c))
+  dplyr::group_by(year,ws, plot_cat,creek, site_id, day1week) %>% dplyr::summarize(avWeek= mean(ctemp_c))
 df_temp_7DAVG <- df_temp %>% mutate(date =as.Date(date)) %>%
-  dplyr::group_by( year,ws, plot_cat, site_id,date) %>% dplyr::summarize(avDayTemp= mean(ctemp_c)) %>% 
+  dplyr::group_by( year,ws, plot_cat,creek, site_id,date) %>% dplyr::summarize(avDayTemp= mean(ctemp_c)) %>% 
   mutate(grp=paste(year, site_id,sep=''))
   
   

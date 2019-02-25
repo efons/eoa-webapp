@@ -30,23 +30,24 @@ ui_db <- dashboardPage(
       selected = "water_quality",
       menuItem("Overview", tabName = "overview", icon = icon("home")),
       menuItem(
-        "Water Quality",
+        "Creek Status Monitoring",
         tabName = "water_quality",
         icon = icon("tint"),
         startExpanded = T,
-        menuSubItem("Biomonitoring Data", tabName = "bio_data"),
-        menuSubItem("Continuous Temperature", tabName = "con_temp"),
-        menuSubItem("Seasonal Water Quality", tabName= "con_wq"),
-        menuSubItem("Bacterial Indicators", tabName = "pathogens"),
-        menuSubItem("Chlorine", tabName = 'chlorine'),
-        menuSubItem("Pesticides", tabName = "pesticide")
+        menuSubItem("(i) Biological Assessments", tabName = "bio_data"),
+        menuSubItem("(ii) Chlorine", tabName = 'chlorine'),
+        menuSubItem("(iii) Continuous Temperature", tabName = "con_temp"),
+        menuSubItem("(iv) Seasonal Water Quality", tabName= "con_wq"),
+        menuSubItem("(v) Pathogen Indicators", tabName = "pathogens")
       ),
       menuItem(
         "Pollutants of Concern",
         tabName = "poc",
         icon = icon("exclamation")
       ),
-      menuItem("Trash in creeks", tabName = "trash", icon = icon("trash"))
+      menuItem("Pesticides", tabName = "pesticide", icon=icon("spray-can")),
+      
+      menuItem("Trash load", tabName = "trash", icon = icon("trash"))
     )
   ),
   
@@ -79,7 +80,27 @@ tabItems(
 
     h5("Data is made available thanks to biological, physical and chemical monitoring efforts across Santa Clara Valley over several years.
 Explore data, maps, graphs and interactive features as they become available."),
-    h5("Browse the sidebar menu items on the left to explore the data!"),
+    HTML("Browse the sidebar menu items on the left to explore the data! Each tab corresponds to a provision of the Municipal Regional Permit (MRP)
+       that regulates the different aspects of stormwater pollution for most municipalities of the San Francisco Bay Area. More specifically, the data collected by SCVURPP and presented in this application 
+       corresponds to the monitoring requirements under the following provisions of the MRP:
+      <br/>
+      <br/>
+      <b>C.8: Water Quality Monitoring:</b>
+      <ul> <li><b>C.8.d: Creek Status Monitoring</b></li>
+      <ul><li> (i) Biological Assessments, including nutrients and general Water Quality Parameters </li>
+      <li> (ii) Chlorine </li>
+      <li> (iii) Temperature </li>
+      <li> (iv) Continuous Monitoring of Dissolved Oxygen, Temperature, pH </li>
+      <li> (v) Pathogen Indicators </li></ul>
+      <li><b>C.8.f: Pollutants of Concern Monitoring</b></li>
+      <li><b>C.8.g: Pesticides and Toxicity Monitoring</b></li></ul>
+     
+
+      <b>C.10: Trash Load Reduction (section iii.v: Receiving Water Monitoring)</b>
+      </br>
+
+       "),
+    br(),
     br(),
     
     tagList("For more information about the program, and to access reports and analyses of these monitoring results, go to the", a("SCVURPPP Website", href="http://scvurppp.org/scvurppp_2018/")),
@@ -335,7 +356,8 @@ Explore data, maps, graphs and interactive features as they become available."),
 
 tabItem(
   tabName = "con_wq",
-  h2("Seasonal Water Quality Monitoring"),
+  h2("Seasonal Water Quality Monitoring"), 
+  actionLink(inputId="wq_desc", label=" ", icon=icon("question-circle")),
   
   # Box for inputs
   fluidRow(
@@ -348,12 +370,6 @@ tabItem(
         max = wq_vars_date[2],
         value = wq_vars_date,
         timeFormat= "%b %Y"
-      ),
-      selectInput(
-        inputId = "wq_ws",
-        label = "Watershed:",
-        choices = as.character(wq_vars_ws),
-        selected = as.character(wq_vars_ws[1])
       ),
       
    
@@ -385,6 +401,13 @@ tabItem(
   fluidRow(
     box(
       width = 12,
+      
+      selectInput(
+        inputId = "wq_ws",
+        label = "Watershed:",
+        choices = as.character(wq_vars_ws),
+        selected = as.character(wq_vars_ws[1])
+      ),
         fluidRow(
           column(6, plotOutput("wq_boxplot_1"),
                  plotOutput("wq_boxplot_2")),
@@ -399,6 +422,7 @@ tabItem(
 
 tabItem(tabName="con_temp",
         h2("Continuous Temperature Monitoring"),
+        actionLink(inputId="temp_desc", label=" ", icon=icon("question-circle")),
         
         # Box for inputs
         fluidRow(
@@ -429,7 +453,9 @@ tabItem(tabName="con_temp",
               
           ),
           #box for map
-          box(width = 8, leafletOutput("map_temp"))
+          box(width = 8,
+              actionLink(inputId="map_temp_desc", label="Map Explanation", icon=NULL),
+              leafletOutput("map_temp"))
         ),
         
         # Plot Outputs

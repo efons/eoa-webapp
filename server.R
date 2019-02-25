@@ -17,9 +17,30 @@ server <- (function(input, output, session) {
   observeEvent(input$bio_tab_title,{
     showModal(modalDialog(
       title = "Biological Condition Assessment",
-      tags$i("Start by selecting an indicator of creek health. Each indicator is computed based on the diversity and number of individuals for a specific aquatic species: benthic macrovertebrates, algae, etc. Environmental stress might affect the survival of these species. Therefore, these biological measures
+      HTML('San Francisco Bay Area Stormwater Municipal Regional Permit (MRP), Provision C.8. on Water Quality Monitoring, 
+      section C.8.d.(i) on Biological Assessments: "The Permittees shall conduct biological
+           assessments (also referred to herein as bioassessments) in accordance with
+           SWAMP Standard Operating Procedures22,23,24 and shall include collection
+           and reporting of in-stream biological and physical habitat data according to
+           the SWAMP Standard Operating Procedures for Bioassessment,3 including
+           benthic algae, benthic macroinvertebrates, water chemistry, and full
+           characterization of physical habitat."
+      <br/>
+      <br/>
+
+      The collected bioassessment data is aggregated to compute biological health indicators. Several indicators are currently in use in California: 
+      <ul><li> California Stream Condition Index (CSCI) for benthic macroinvertebrates </li>
+          <li> Algae Stream Condition Index (ASCI) for Soft Algae </li>
+          <li> Algae Stream Condition Index (ASCI) for Diatoms </li>
+          <li> Hybrid Algae Stream Condition Index (ASCI) for both Soft Algae and diatoms </li></ul>
+
+      <br/> 
+      <br/>
+
+      <i> Instructions: Start by selecting an indicator of creek health. Each indicator is computed based on the diversity and number of individuals for a specific aquatic species: benthic macrovertebrates, algae, etc. 
+              Environmental stress (chemistry, nutrient availability, physical habitat, etc) might affect the survival of these species. Therefore, these biological measures
               can be used as indicators of creek health.This dashboard allows you to visualize the biological health of creeks
-              throughout the Santa Clara Valley, and to investigate the role played by environmental stress on biological condition.")
+              throughout the Santa Clara Valley, and to investigate the role played by environmental stress on biological condition.</i>')
       ,
       easyClose = TRUE, footer=modalButton("Got it!")
     ))
@@ -40,7 +61,7 @@ server <- (function(input, output, session) {
   score_desc_table <- reactive({
     df <- bio_vars_filter %>% dplyr::filter(param == input$filter_by) %>% 
       dplyr::select(seq(3,6)) %T>% 
-      {names(.) <- c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered")} %>% t()
+      {names(.) <- c("Very Likely Altered","Likely Altered" ,"Possibly Intact", "Likely Intact")} %>% t()
     
     df[1,] <- paste(df[1,], " - ", df[2,])
     df[2,] <- paste(df[2,], " - ", df[3,])
@@ -48,7 +69,7 @@ server <- (function(input, output, session) {
     df[4,] <- paste(" > ", df[4,])
 
     
-    col=c(1,2,3,4)
+    col=seq(4,1,-1)
     name <- as.character(bio_vars_filter[bio_vars_filter$param == input$filter_by,'name'])
     df <- data.frame(df, colors=col) 
     colnames(df) <-c(name,"colors")
@@ -632,13 +653,13 @@ server <- (function(input, output, session) {
     content <- paste(
       sep = "<br/>",
       "<b>Watershed:</b>",
-      data_sub$ws,
-      "<b>Creek:</b>",
-      data_sub$creek,
+      paste0(data_sub$ws, " (",data_sub$creek, ")"),
       "<b>RMC Site ID:</b>",
       data_sub$rmc,
       "<b>Water Year:</b>",
-      data_sub$year
+      data_sub$year, 
+      paste0("<b>",filter_name,"</b>"), 
+      signif(data_sub$filter,2)
     )
     
     # Customize color and size of circle markers
@@ -932,6 +953,68 @@ server <- (function(input, output, session) {
   ## Continuous water quality
   #############################################################################################################################
   
+  
+  observeEvent(input$wq_desc,{
+    showModal(modalDialog(
+      title = "Continuous Monitoring of Dissolved Oxygen, Temperature, Conductance and pH",
+      HTML('San Francisco Bay Area Stormwater Municipal Regional Permit (MRP), Provision C.8. on Water Quality Monitoring, 
+      section C.8.d.(iv): "The Permittees shall monitor general water quality parameters of streams using a water quality sonde or equivalent.
+      Parameters shall include dissolved oxygen (mg/L and % saturation), pH, specific conductance (uS), and temperature (C)."
+      <br/>
+      <br/>
+      Exceedances of these water quality parameters are based upon the following thresholds: 
+      <ul> <li>"Maximum Weekly Average Temperature exceeds 17.0C for a 
+      Steelhead stream, or 20 percent of the instantaneous results exceed 24C...;</li>
+      <li> 20 percent of instantaneous pH results are < 6.5 or > 8.5...; </li>
+      <li> 20 percent of the instantaneous specific conductance results are > 2000 uS, or there is a spike in readings with no obvious natural explanation...;</li>
+      <li> or 20 percent of instantaneous dissolved oxygen results are < 7 mg/L in a cold water fishery stream."</li></ul>'
+        )
+     ,
+      
+      easyClose = TRUE, footer=modalButton("Got it!")
+    ))
+  })
+  
+  wq_data_sub <- function (filter_dates, param_slct, season_slct, ws_slct) {
+    
+    data_sub_wq <- df_wq %>%
+      dplyr::filter(
+        as.Date(date) - as.Date(filter_dates[1])>= 0 & 
+          as.Date(date) - as.Date(filter_dates[2])<= 0,
+        if (!ws_slct == "all"){ws %in% ws_slct} else ({ws %in% wq_vars_ws}) ) %>% 
+      dplyr::filter(if(season_slct == "S_F") {season %in% c("S","F")} else season %in% season_slct )
+ 
+    data_sub_wq <-
+      cbind(data_sub_wq, data_sub_wq[, which(colnames(data_sub_wq) == param_slct)])
+    
+    parameter_name <-
+      as.character(MRP_threshold[match(param_slct, MRP_threshold$param), 'label'])
+    colnames(data_sub_wq)[ncol(data_sub_wq)] <- parameter_name
+    
+    
+    return(data_sub_wq)
+  }
+  
+  
+  wq_data_sub_map <- reactive({
+ 
+    wq_data_sub(filter_dates = as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month")),
+                param_slct = input$wq_param,
+                season_slct= input$wq_season,
+                ws_slct="all")
+  })
+  
+  
+  wq_data_sub_plots <- reactive({
+
+    
+    wq_data_sub(filter_dates=as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month")),
+                param_slct=input$wq_param,
+                season_slct=input$wq_season, 
+                ws_slct=input$wq_ws)
+  })
+  
+  
   # update inputs - sub-watersheds - sites
   
   
@@ -943,7 +1026,7 @@ server <- (function(input, output, session) {
               zoom = 9) %>%
       addMapPane(name = "polygons", zIndex = 410) %>%
       addMapPane(name = "markers", zIndex = 420) %>% 
-      addLegend("topright", title="% above limit", colors=colors_wq, labels=c("0","0-10", "10-20", "20-30",
+      addLegend("topright", title="% WQS exceedance", colors=colors_wq, labels=c("0","0-10", "10-20", "20-30",
                                                        "30-40", "40-50", "50-60",
                                                        "60-70", "70-80", "80-90",
                                                        "90-100"))
@@ -956,32 +1039,31 @@ server <- (function(input, output, session) {
     sites_cWQ_mapWQ <- sites_cWQ %>% 
       dplyr::filter(wq_TF == T)
     
-  # get dates
-    filter_dates <- as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month"))
+  # % exceedances
+    data_sub_wq <- wq_data_sub_map()
+    threshold <-
+      MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_sup']
+    threshold_inf <-  MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_inf']
     
-
+    color_cat <- sapply(sites_cWQ_mapWQ$site_id,
+                        function(x) 
+                          (sum(data_sub_wq[which(data_sub_wq$site_id == x),ncol(data_sub_wq)]<threshold_inf |
+                                 data_sub_wq[which(data_sub_wq$site_id == x),ncol(data_sub_wq)]>threshold )/
+                             length(data_sub_wq[which(data_sub_wq$site_id == x),ncol(data_sub_wq)]))
+    )
+    
     popup <- paste(
       sep = "<br/>",
       "<b>Site:</b>",
       sites_cWQ_mapWQ$site_id,
       "<b>Watershed:</b>",
-      sites_cWQ_mapWQ$ws
+      sites_cWQ_mapWQ$ws, 
+      "<b>% Exceedance:</b>", 
+      paste(signif(color_cat,2)*100,"%")
     )
     
-    get_color_wq <- function(site_id) {
-      data_sub_wq <- wq_data_sub()    
+    get_color_wq <- function() {
      
-       threshold <-
-        MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_sup']
-      threshold_inf <-  MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_inf']
-      
-      color_cat <- sapply(site_id,
-                         function(x) 
-                           (sum(data_sub_wq[which(data_sub_wq$site_id == x),ncol(data_sub_wq)]<threshold_inf |
-                                  data_sub_wq[which(data_sub_wq$site_id == x),ncol(data_sub_wq)]>threshold )/
-                           length(data_sub_wq[which(data_sub_wq$site_id == x),ncol(data_sub_wq)]))
-                         )
-      
         return(colors_wq[signif(color_cat,1)*10+1])
      
     }
@@ -990,7 +1072,7 @@ server <- (function(input, output, session) {
     get_weight <- function() { 
       return(sapply(sheds$SYSTEM, function(x) {
         if (x == input$wq_ws) {
-          5
+          3
         } else{
           1
         }
@@ -1024,9 +1106,11 @@ server <- (function(input, output, session) {
         lng = sites_cWQ_mapWQ$long,
         lat = sites_cWQ_mapWQ$lat,
         radius = 5,
-        opacity = 1,
+        weight = 1,
+        opacity = 0.9,
+        fill = T,
         fillOpacity = 0.8,
-        color = get_color_wq(sites_cWQ_mapWQ$site_id),
+        fillColor = get_color_wq(),
         popup = popup,
         options = leafletOptions(pane = "markers")
       ) 
@@ -1059,14 +1143,15 @@ server <- (function(input, output, session) {
             data.frame(x_var = as.factor(data_sub_wq[, which(colnames(data_sub_wq) ==
                                                                x_param)]),
                        y_var = data_sub_wq[, which(colnames(data_sub_wq) ==
-                                                     param)])
+                                                     param)]) %>% 
+            dplyr::filter(!is.na(y_var))
           
           p <-
             ggplot(data = df_tempo, aes(x = x_var, y = y_var)) + geom_boxplot(col =
                                                                                 rgb(0, 0, 1, 0.6)) +
             theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
             xlab(x_param) + ylab(colnames(data_sub_wq)[ncol(data_sub_wq)]) +
-            ylim(c(0,lim_sup))+ 
+            coord_cartesian(ylim=c(0,lim_sup))+ 
             geom_hline(
               yintercept = threshold,
               lty = 2,
@@ -1085,7 +1170,8 @@ server <- (function(input, output, session) {
               geom = "text",
               fun.y = median,
               position = position_dodge(width = 1)
-            )
+            ) + 
+            ggtitle(paste("Creeks:", paste(unique(data_sub_wq$creek),collapse=",")))
           
           return(p)
         }
@@ -1093,35 +1179,11 @@ server <- (function(input, output, session) {
       } else
         return(NULL)
     }
+
   
-  wq_data_sub <- reactive({
-    filter_dates <- as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month"))
-    
-    param <- input$wq_param
-    season <- if(input$wq_season == "S_F") {c("S","F")} else {input$wq_season}
-    ws <- input$wq_ws
-    season_input <- input$wq_season
-    
-    data_sub_wq <- df_wq %>%
-      dplyr::filter(
-        as.Date(date) - as.Date(filter_dates[1])>= 0 & 
-          as.Date(date) - as.Date(filter_dates[2])<= 0,
-        ws %in% input$wq_ws) %>% 
-      dplyr::filter(if(input$wq_season == "S_F") {season %in% c("S","F")} else season %in% input$wq_season )
-    
-    data_sub_wq <-
-      cbind(data_sub_wq, data_sub_wq[, which(colnames(data_sub_wq) == param)])
-    
-    parameter_name <-
-      as.character(MRP_threshold[match(param, MRP_threshold$param), 'label'])
-    colnames(data_sub_wq)[ncol(data_sub_wq)] <- parameter_name
-    
-    
-    return(data_sub_wq)
-  })
   
   output$wq_boxplot_1 <- renderPlot({
-    data_sub_wq <- wq_data_sub()
+    data_sub_wq <- wq_data_sub_plots()
     param <- colnames(data_sub_wq)[ncol(data_sub_wq)]
     return(
       boxplot_function(
@@ -1135,7 +1197,7 @@ server <- (function(input, output, session) {
   
   
   output$wq_boxplot_2 <- renderPlot({
-    data_sub_wq <- wq_data_sub()
+    data_sub_wq <- wq_data_sub_plots()
     param <- colnames(data_sub_wq)[ncol(data_sub_wq)]
     return(
       boxplot_function(
@@ -1151,7 +1213,7 @@ server <- (function(input, output, session) {
   # Beanplots < boxplots now
   
   output$wq_beanplot_1 <- renderPlot({
-    data_sub_wq <- wq_data_sub()
+    data_sub_wq <- wq_data_sub_plots()
     param <- colnames(data_sub_wq)[ncol(data_sub_wq)]
     return(
       boxplot_function(
@@ -1164,7 +1226,7 @@ server <- (function(input, output, session) {
   })
   
   output$wq_beanplot_2 <- renderPlot({
-    data_sub_wq <- wq_data_sub()
+    data_sub_wq <- wq_data_sub_plots()
     param <- colnames(data_sub_wq)[ncol(data_sub_wq)]
     return(
       boxplot_function(
@@ -1181,8 +1243,33 @@ server <- (function(input, output, session) {
 # Continuous Temperature 
 #################################################################################################################################
   
-  # update inputs - sub-watersheds - sites
+  observeEvent(input$temp_desc,{
+    showModal(modalDialog(
+      title = "Continuous Monitoring of Dissolved Oxygen, Temperature, Conductance and pH",
+      HTML('San Francisco Bay Area Stormwater Municipal Regional Permit (MRP), Provision C.8. on Water Quality Monitoring, 
+           section (iii): "The Permittees shall monitor temperature of their streams using a digital temperature logger or equivalent [...]
+            at 60-minute intervals from April through September"
+           <br/>
+           <br/>
+           Exceedances of temperature parameters are based upon the following thresholds: 
+          "The temperature trigger is defined as when two or more weekly average temperatures exceed the Maximum Weekly Average
+           Temperature of 17.0°C for a Steelhead stream, or when 20% of the results at one sampling station exceed the instantaneous maximum of 24C."')
+      ,
+      
+      easyClose = TRUE, footer=modalButton("Got it!")
+      ))
+  })
   
+  observeEvent(input$map_temp_desc,{
+    showModal(modalDialog(
+      title = "Temperature Map",
+      HTML("For the purpose of this map, the temperature color scale corresponds to the average of all the temperature data points over the selected time period. This color scale is only a <i>relative</i> scale, 
+           it does not indicate water quality objective exceedances. Rather, it's a simplified way to compare sites with one another."),
+      easyClose = TRUE, footer=modalButton("Got it!")
+    ))
+  })
+  
+  # update inputs - sub-watersheds - sites
   
   output$map_temp <-  renderLeaflet({
     leaflet() %>%
@@ -1250,7 +1337,7 @@ server <- (function(input, output, session) {
     get_weight_temp <- function() {
       return(sapply(sheds$SYSTEM, function(x) {
         if (x == input$temp_ws) {
-          5
+          3
         } else{
           1
         }
@@ -1284,9 +1371,11 @@ server <- (function(input, output, session) {
         lng = sites_cWQ_maptemp$long,
         lat = sites_cWQ_maptemp$lat,
         radius = 5,
-        opacity = 1,
+        weight = 1,
+        opacity = 0.9,
+        fill = T,
         fillOpacity = 0.8,
-        color = get_color_temp(sites_cWQ_maptemp$site_id),
+        fillColor = get_color_temp(sites_cWQ_maptemp$site_id),       
         popup = popup_temp,
         options = leafletOptions(pane = "markers")
       )      #addLegendCustom(position="topright", colors=c("blue","orange","purple"),
@@ -1336,10 +1425,11 @@ server <- (function(input, output, session) {
                      col = "red") +
           scale_shape_manual(values = seq(1, 15, 1)) +
           theme_bw() +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1))
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
       }
       
-      return(p)
+      return(p + 
+               ggtitle(paste("Creeks:", paste(unique(data_sub_temp$creek)))))
     }
     else {
       NULL
