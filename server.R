@@ -963,7 +963,7 @@ server <- (function(input, output, session) {
       <br/>
       <br/>
       Exceedances of these water quality parameters are based upon the following thresholds: 
-      <ul> <li>"Maximum Weekly Average Temperature exceeds 17.0C for a 
+      <ul> <li>"Maximum Weekly Average Temperature exceeds 17.0 C for a 
       Steelhead stream, or 20 percent of the instantaneous results exceed 24C...;</li>
       <li> 20 percent of instantaneous pH results are < 6.5 or > 8.5...; </li>
       <li> 20 percent of the instantaneous specific conductance results are > 2000 uS, or there is a spike in readings with no obvious natural explanation...;</li>
@@ -1253,7 +1253,7 @@ server <- (function(input, output, session) {
            <br/>
            Exceedances of temperature parameters are based upon the following thresholds: 
           "The temperature trigger is defined as when two or more weekly average temperatures exceed the Maximum Weekly Average
-           Temperature of 17.0°C for a Steelhead stream, or when 20% of the results at one sampling station exceed the instantaneous maximum of 24C."')
+           Temperature of 17.0 C for a Steelhead stream, or when 20% of the results at one sampling station exceed the instantaneous maximum of 24.0 C."')
       ,
       
       easyClose = TRUE, footer=modalButton("Got it!")
