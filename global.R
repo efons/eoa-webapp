@@ -33,6 +33,7 @@ library(stringr)
 library(scales)
 library(beanplot)
 library(DT)
+library(RColorBrewer)
 
 # packageDescription("shinyjs", fields="License")
 # Check license status 
@@ -281,6 +282,53 @@ df_temp_7DAVG <- df_temp %>% mutate(date =as.Date(date)) %>%
   mutate(grp=paste(year, site_id,sep=''))
   
   
+# D - Creek trash data 
+#############################################################################################################################################
+#############################################################################################################################################
+
+# Upload data
+
+sites_trash <- read_excel("creek_trash.xlsx", sheet= "Sites", skip = 1) %>%
+  dplyr::filter(agency=="SCVURPPP", 
+                siteType == "Targeted") 
+
+df_trash <- read.xlsx(file="creek_trash.xlsx", sheetName= "Target_Assess", colIndex=seq(1,40), rowIndex = seq(2,102)) %>%
+  dplyr::filter(agency=="SCVURPPP") %>%
+  mutate(main_pathway=NA,
+         main_pathway_value=NA,
+         main_chann_cvr = NA,
+         main_bank_cvr=NA,
+         sum_pct=litter_wind+illegal_camp+dumping+other,
+         sum_bank_cvr=grasses+bushes+trees+open+armored,
+         sum_chann_cvr=wood+aqVeg+open.1+dry,
+         
+         trashCat= factor(trashCat, levels=c("Low", "Moderate", "High", "Very High"))) %>%
+  dplyr::filter(sum_pct==100,
+                sum_bank_cvr==100, 
+                sum_chann_cvr == 100)
+
+
+# Variables that will be used in ui 
+trash_vars_pathways <- c("Litter Wind", "Illegal Camp", "Dumping", "Other")
+
+trash_vars_bank_cvr <- c("Grasses", "Bushes", "Trees", "Open", "Armored")
+trash_vars_chann_cvr <- c("Wood", "AqVeg", "Open", "Dry")
+trash_vars_city <- unique(sites_trash$juris) 
+col_pathways <- brewer.pal(4,"Paired")
+col_trashCat <-  c(rgb(166,219,160,maxColorValue = 255), 
+                   rgb(254,235,160,maxColorValue = 255), 
+                   rgb(255,109,70,maxColorValue = 255),
+                   rgb(118,42,131,maxColorValue = 255))
+
+
+
+
+
+
+
+
+
+
 
 
 

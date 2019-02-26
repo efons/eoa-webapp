@@ -518,7 +518,31 @@ tabItem(
 # Trash Menu Item
 tabItem(tabName = "trash",
         h2("Trash Pollution"),
-        h4("Receiving Water Monitoring... Under construction"))
+        h4("Receiving Water Monitoring... Preliminary Results... Targeted Sites only"),
+        
+        column(3,
+               box(width=12,title="Data Filters",
+                pickerInput(
+                 inputId = "trash_city",
+                 label = "Choose city:",
+                 choices = trash_vars_city,
+                 selected = trash_vars_city,
+                 options = list(`actions-box`=T,size = 20),
+                 multiple = T
+               ))),
+        
+        column(9,
+        box(width=12,
+            leafletOutput("trash_map"))),       
+        
+        tabBox(width=12,
+               tabPanel(title="Main Pathways",
+                        plotOutput("bar_trashcat_pathway")),
+               tabPanel("Main Trash Items", 
+                        plotOutput("hist_items")))
+        
+        
+        )
     )
   )
 )

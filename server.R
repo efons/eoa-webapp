@@ -1509,9 +1509,102 @@ server <- (function(input, output, session) {
   })
   
   
+  # Creek Trash 
+  ################################################################################################################################
+
+  
+  output$bar_trashcat_pathway <- renderPlot({
+    df <- df_trash %>%
+      dplyr::group_by(trashCat) %>%
+      dplyr::summarise(mean_litter=mean(litter_wind, na.rm=T),
+                       mean_camp = mean(illegal_camp, na.rm=T),
+                       mean_dumping = mean(dumping,na.rm=T),
+                       mean_other = mean(other, na.rm=T),
+                       n=n())
+    df_avg_pct <- data.frame(trashCat= df$trashCat, pathway="Litter Wind", mean_pct=df$mean_litter, n=df$n)
+    df_avg_pct <- rbind(df_avg_pct,
+                        data.frame(trashCat= df$trashCat, pathway="Dumping", mean_pct=df$mean_dumping,n=df$n),
+                        data.frame(trashCat= df$trashCat, pathway="Illegal Camp", mean_pct=df$mean_camp,n=df$n),
+                        data.frame(trashCat= df$trashCat, pathway="Other", mean_pct=df$mean_other,n=df$n))
+    
+    labels <- sapply(1:4, function(x) paste0(as.character(df[x,1]$trashCat)," (n=",df[x,6], ")"))
+    ggplot(data=df_avg_pct, aes(x=trashCat, y=mean_pct/100, fill=pathway)) + geom_bar(stat="identity") + 
+      xlab("Trash Category") + 
+      guides(fill=guide_legend(title="Pathway:")) + ylab("Percentage Averaged Pathway Contribution") +
+      scale_fill_manual(values=col_pathways) +
+      scale_y_continuous(expand = c(0, 0),labels = percent_format()) +
+      scale_x_discrete(name="Trash Category", labels=labels) +
+      geom_text(aes(label= ifelse(round(mean_pct)>1,round(mean_pct), '')), position=position_stack(vjust=0.5), size=3, col="black") +
+      theme(axis.text.x = element_text(angle = 35, hjust = 1)) 
+    
+  })
+  
+  output$hist_items <- renderPlot({
+    
+      df <- df_trash
+    df_items <- data.frame(trashCat = df$trashCat,  rank=1, mainItem= df$prevItem1)
+    df_items <- rbind(df_items, 
+                      data.frame(trashCat = df$trashCat,  rank=2, mainItem= df$prevItem2),
+                      data.frame(trashCat = df$trashCat,   rank=3, mainItem= df$prevItem3),
+                      data.frame(trashCat = df$trashCat, rank=4, mainItem= df$prevItem4),
+                      data.frame(trashCat = df$trashCat,  rank=5, mainItem= df$prevItem5))
+    sort(as.character(unique(df_items$mainItem)))
+    
+    to_replace <- c("Fabric and cloth", "Metal Material", "Other plastic", "Other: balls ", "Other: Balls (soccer, basket, tennis) ", "Paper and cardboard", "Shopping carts", "Single Use Plastic Carryout Bags",  "Single Use Plastic Grovery Bags", "Spray paint cans" ,"Wood material" )
+    replace_by <- c("Fabric and Cloth", "Metal Materials", "Other Plastic", "Other: balls", "Other: balls", "Paper and Cardboard", "Shopping Carts", "Single Use Plastic Grocery Bags", "Single Use Plastic Grocery Bags" , "Spray Paint Cans", "Wood material/debris"  )
+    df_items$mainItem <- sapply(df_items$mainItem, function(x)  if (x %in% to_replace) {replace_by[which(to_replace==x)]} else {as.character(x)})
+    
+    
+    # All trash items
+    ggplot(data=df_items %>% 
+             dplyr::filter(!is.na(mainItem)) %>%
+             dplyr::group_by(mainItem) %>%
+             dplyr::summarise(n=n()) %>%
+             dplyr::arrange(n),
+           aes(x=reorder(mainItem, -n), y=n)) + geom_bar(stat="identity") + 
+      xlab("Trash Category") + ylab("Number of sites with trash category") +  guides(fill= guide_legend(title="Main Trash Items"))+ 
+      theme(axis.text.x = element_text(angle = 90, hjust = 1))
+    
+  })
   
   
+  # Map of trash sites 
   
   
+
+  
+  
+  output$trash_map <- renderLeaflet({
+    leaflet() %>% 
+      addProviderTiles(providers$Esri.WorldTopoMap) %>%
+      setView(lng = -121.8,
+              lat = 37.3,
+              zoom = 9) %>% 
+      addLegend(position="topright", title= "Trash Categories",colors=col_trashCat, labels=c("Low", "Moderate","High", "Very High"))
+    })
+    
+    
+    
+  observe({
+    
+  req(input$menu_items == "trash")
+    
+  sites_sub <- sites_trash %>% 
+    dplyr::filter(juris %in% input$trash_city)
+    
+  get_radius_trash <- function(siteID) {
+    rad <- 6
+    rad <- rad+10*df_trash[match(siteID,df_trash$siteID),"tot_gal_sqft"]/max(df_trash$tot_gal_sqft)}
+  
+  get_color_trash <- function(siteID) {
+    col_trashCat[as.numeric(df_trash[match(siteID,df_trash$siteID),"trashCat"])]}
+  
+  leafletProxy("trash_map") %>% clearMarkers() %>% 
+      addCircleMarkers(lng=sites_sub$dsLong, lat=sites_sub$dsLat, radius=get_radius_trash(sites_sub$siteID),
+                       fillColor=get_color_trash(sites_sub$siteID), fillOpacity = 0.9, weight=1, color="blue")
+ 
+  })  
+
+ 
   
 })
