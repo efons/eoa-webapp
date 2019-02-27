@@ -1511,17 +1511,17 @@ server <- (function(input, output, session) {
   })
   
   
-  observeEvent(input$temp_timeseries_1_dbl_click, {
+  observeEvent(input$temp_timeseries_1_brush,{
     brush <- input$temp_timeseries_1_brush
-    if (!is.null(brush)) {
       ranges$x <- c(as.Date(brush$xmin, origin="1970-01-01"), as.Date(brush$xmax, origin="1970-01-01"))
       ranges$y <- c(brush$ymin, brush$ymax)
-      
-    } else {
-      ranges$x <- NULL
-      ranges$y <- c(0,30)
-    }
   })
+  
+  observeEvent(input$keyPressed, {
+    ranges$x <- NULL
+    ranges$y <- c(0,30)
+      })
+  
   
   
   output$temp_timeseries_2 <- renderPlot({
