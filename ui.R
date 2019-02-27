@@ -28,7 +28,7 @@ ui_db <- dashboardPage(
     sidebarMenu(
       id = "menu_items",
       selected = "water_quality",
-      menuItem("Overview", tabName = "overview", icon = icon("home")),
+      menuItem("Homepage", tabName = "overview", icon = icon("home")),
       menuItem(
         "Creek Status Monitoring",
         tabName = "water_quality",
@@ -61,6 +61,7 @@ ui_db <- dashboardPage(
            .small-box {height: 100px}')
 
 )),
+    tags$script(js),
 
  #.box {margin:10px}
             #.#tabBox { height:450px;margin:2px; padding=0px}
@@ -467,7 +468,9 @@ tabItem(tabName="con_temp",
           choices = as.character(wq_vars_ws),
           selected = as.character(wq_vars_ws[1])
         ),
-        plotOutput("temp_timeseries_1"),
+        br(),
+        HTML("<i>Hover over the plot and brush to zoom in. Press 'escape' to zoom out.</i>"),
+        plotOutput("temp_timeseries_1", dblclick = "temp_timeseries_1_dbl_click", brush=brushOpts(id="temp_timeseries_1_brush", resetOnNew = T)),
         plotOutput("temp_timeseries_2"))),
 
 
@@ -527,7 +530,7 @@ tabItem(tabName = "trash",
                  label = "Choose city:",
                  choices = trash_vars_city,
                  selected = trash_vars_city,
-                 options = list(`actions-box`=T,size = 20),
+                 options = pickerOptions(actionsBox=T,liveSearch = T),
                  multiple = T
                ))),
         
@@ -537,7 +540,7 @@ tabItem(tabName = "trash",
         
         tabBox(width=12,
                tabPanel(title="Main Pathways",
-                        plotOutput("bar_trashcat_pathway")),
+                        uiOutput("cond_trash_pathway")),
                tabPanel("Main Trash Items", 
                         plotOutput("hist_items")))
         

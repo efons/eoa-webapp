@@ -1386,6 +1386,7 @@ server <- (function(input, output, session) {
       
   })
   
+  ranges <- reactiveValues(x=NULL, y=c(0,30))
   
   time_plot_function <- function(data_sub_temp, param) {
     if (nrow(data_sub_temp) > 0) {
@@ -1403,13 +1404,14 @@ server <- (function(input, output, session) {
         p <-
           ggplot(data = data_sub_temp, aes(x = date, y = avDayTemp)) + geom_line(aes(col =
                                                                                        site_id, group = grp))  +
-          ylim(c(0, 30))  + ylab("Average Daily Temperature (\u00B0C)") +
+          ylab("Average Daily Temperature (\u00B0C)") +
           xlab("Date") +
           theme_bw() +
           geom_hline(yintercept = threshold,
                      linetype = 2,
                      col = "red") +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1))
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+          coord_cartesian(xlim=ranges$x, ylim=ranges$y, expand=F)
         
       }
       if (param == "avWeek") {
@@ -1419,13 +1421,14 @@ server <- (function(input, output, session) {
         p <-
           ggplot(data = data_sub_temp, aes(x = day1week, y = avWeek, col = site_id)) + geom_point(aes(shape =
                                                                                                         site_id), size = 2) +
-          ylim(c(0, 30))  + ylab("MWAT (\u00B0C)") + xlab("Date") +
+         ylab("MWAT (\u00B0C)") + xlab("Date") +
           geom_hline(yintercept = threshold,
                      linetype = 2,
                      col = "red") +
           scale_shape_manual(values = seq(1, 15, 1)) +
           theme_bw() +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+          coord_cartesian(xlim=ranges$x, ylim=ranges$y, expand=F) 
       }
       
       return(p + 
@@ -1435,6 +1438,8 @@ server <- (function(input, output, session) {
       NULL
     }
   }
+  
+  
   
   temp_timeseries_1 <- reactive({
     filter_dates <- as.Date(cut(as.POSIXct(input$temp_dates,tz=''),"month"))
@@ -1465,6 +1470,7 @@ server <- (function(input, output, session) {
     
   })
   
+
   temp_timeseries_2 <- reactive({
     
     filter_dates <- as.Date(cut(as.POSIXct(input$temp_dates,tz=''),"month"))
@@ -1503,6 +1509,21 @@ server <- (function(input, output, session) {
     p <- temp_timeseries_1()
     return(p)
   })
+  
+  
+  observeEvent(input$temp_timeseries_1_dbl_click, {
+    brush <- input$temp_timeseries_1_brush
+    if (!is.null(brush)) {
+      ranges$x <- c(as.Date(brush$xmin, origin="1970-01-01"), as.Date(brush$xmax, origin="1970-01-01"))
+      ranges$y <- c(brush$ymin, brush$ymax)
+      
+    } else {
+      ranges$x <- NULL
+      ranges$y <- c(0,30)
+    }
+  })
+  
+  
   output$temp_timeseries_2 <- renderPlot({
     p <- temp_timeseries_2()
     return(p)
@@ -1512,15 +1533,34 @@ server <- (function(input, output, session) {
   # Creek Trash 
   ################################################################################################################################
 
+  data_sub_trash <- reactive({
+    df_trash %>% 
+      dplyr::filter(juris %in% input$trash_city)
+  })
+  
+  output$cond_trash_pathway <- renderUI({
+    if (nrow(data_sub_trash()) == 0) {
+      h5(
+        "No data to show: Select at least one city"
+      )
+    }
+    else {
+      plotOutput("bar_trashcat_pathway")
+    }
+  })
   
   output$bar_trashcat_pathway <- renderPlot({
-    df <- df_trash %>%
+    
+    if (nrow(data_sub_trash())>0){ 
+ 
+    df <- data_sub_trash() %>%
       dplyr::group_by(trashCat) %>%
       dplyr::summarise(mean_litter=mean(litter_wind, na.rm=T),
                        mean_camp = mean(illegal_camp, na.rm=T),
                        mean_dumping = mean(dumping,na.rm=T),
                        mean_other = mean(other, na.rm=T),
                        n=n())
+      
     df_avg_pct <- data.frame(trashCat= df$trashCat, pathway="Litter Wind", mean_pct=df$mean_litter, n=df$n)
     df_avg_pct <- rbind(df_avg_pct,
                         data.frame(trashCat= df$trashCat, pathway="Dumping", mean_pct=df$mean_dumping,n=df$n),
@@ -1536,12 +1576,15 @@ server <- (function(input, output, session) {
       scale_x_discrete(name="Trash Category", labels=labels) +
       geom_text(aes(label= ifelse(round(mean_pct)>1,round(mean_pct), '')), position=position_stack(vjust=0.5), size=3, col="black") +
       theme(axis.text.x = element_text(angle = 35, hjust = 1)) 
+    } else NULL
     
   })
   
   output$hist_items <- renderPlot({
     
-      df <- df_trash
+      df <- data_sub_trash()
+      
+      if (nrow(df)>0){ 
     df_items <- data.frame(trashCat = df$trashCat,  rank=1, mainItem= df$prevItem1)
     df_items <- rbind(df_items, 
                       data.frame(trashCat = df$trashCat,  rank=2, mainItem= df$prevItem2),
@@ -1564,7 +1607,9 @@ server <- (function(input, output, session) {
            aes(x=reorder(mainItem, -n), y=n)) + geom_bar(stat="identity") + 
       xlab("Trash Category") + ylab("Number of sites with trash category") +  guides(fill= guide_legend(title="Main Trash Items"))+ 
       theme(axis.text.x = element_text(angle = 90, hjust = 1))
-    
+      }
+      
+      else {NULL} 
   })
   
   
@@ -1599,12 +1644,23 @@ server <- (function(input, output, session) {
   get_color_trash <- function(siteID) {
     col_trashCat[as.numeric(df_trash[match(siteID,df_trash$siteID),"trashCat"])]}
   
+  popup_trash <- paste(
+    sep="<br/>",
+    sites_sub$siteID,
+    sites_sub$juris,
+    "<b> Trash Volume (gal/ft2):</b>",
+    signif(df_trash[match(sites_sub$siteID,df_trash$siteID),"tot_gal_sqft"],2)
+    
+  )
+  
   leafletProxy("trash_map") %>% clearMarkers() %>% 
       addCircleMarkers(lng=sites_sub$dsLong, lat=sites_sub$dsLat, radius=get_radius_trash(sites_sub$siteID),
-                       fillColor=get_color_trash(sites_sub$siteID), fillOpacity = 0.9, weight=1, color="blue")
+                       fillColor=get_color_trash(sites_sub$siteID), fillOpacity = 0.9, weight=1, color="blue",
+                       popup=popup_trash)
  
   })  
 
  
   
 })
+

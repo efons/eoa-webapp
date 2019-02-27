@@ -35,8 +35,7 @@ library(beanplot)
 library(DT)
 library(RColorBrewer)
 
-# packageDescription("shinyjs", fields="License")
-# Check license status 
+
 
 #  - Import spatial files to be used for mapping
 ################################################################################################################################################
@@ -292,21 +291,17 @@ sites_trash <- read_excel("creek_trash.xlsx", sheet= "Sites", skip = 1) %>%
   dplyr::filter(agency=="SCVURPPP", 
                 siteType == "Targeted") 
 
-df_trash <- read.xlsx(file="creek_trash.xlsx", sheetName= "Target_Assess", colIndex=seq(1,40), rowIndex = seq(2,102)) %>%
+df_trash <- read_excel(path="creek_trash.xlsx", sheet= "Target_Assess", skip=1) %>% 
   dplyr::filter(agency=="SCVURPPP") %>%
-  mutate(main_pathway=NA,
-         main_pathway_value=NA,
-         main_chann_cvr = NA,
-         main_bank_cvr=NA,
-         sum_pct=litter_wind+illegal_camp+dumping+other,
+  mutate(sum_pct=litter_wind+illegal_camp+dumping+other,
          sum_bank_cvr=grasses+bushes+trees+open+armored,
-         sum_chann_cvr=wood+aqVeg+open.1+dry,
-         
-         trashCat= factor(trashCat, levels=c("Low", "Moderate", "High", "Very High"))) %>%
+         sum_chann_cvr=wood+aqVeg+open__1+dry,
+         trashCat= factor(trashCat, levels=c("Low", "Moderate", "High", "Very High")),
+         juris=sites_trash[match(siteID,sites_trash$siteID),"juris"]$juris) %>%
   dplyr::filter(sum_pct==100,
                 sum_bank_cvr==100, 
-                sum_chann_cvr == 100)
-
+                sum_chann_cvr == 100) %>% 
+  as.data.frame()
 
 # Variables that will be used in ui 
 trash_vars_pathways <- c("Litter Wind", "Illegal Camp", "Dumping", "Other")
@@ -418,7 +413,14 @@ give_tot <- function(x){
 }
 
 
-
+# Detect when user presses escape 
+js <- '
+$(document).on("keyup", function(e) {
+if(e.keyCode == 27){
+Shiny.onInputChange("keyPressed", Math.random());
+}
+});
+'
 
 
 
