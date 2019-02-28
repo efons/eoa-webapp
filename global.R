@@ -53,6 +53,7 @@ sheds <- readOGR("./shp/SBC_Sheds_SCC_Only_w_Alameda.shp", GDAL1_integer64_polic
 # sites info 
 sites <- read_excel("sites master file.xlsx", na=c("", "NA", "#N/A"),sheet="copy_01.29") %>%
   arrange(rmc_id)
+# useful for biodata, chlorine 
 
 
 # make sure shp watershed names are consistent with sites file
@@ -318,13 +319,45 @@ col_trashCat <-  c(rgb(166,219,160,maxColorValue = 255),
 
 
 
+# E - Chlorine data 
+#############################################################################################################################################
+#############################################################################################################################################
+
+# Upload data
+
+
+# monitoring data
+df_chlo <- read_excel("All_chlorine_results_2012-2018.xlsx", sheet="SC (2)") %>%
+  dplyr::filter(FieldReplicate == 1,
+                QACode == "None", 
+                !is.na(Result)) %>%  # all duplicate results in a year are deleted for now
+  # for later: keep duplicate when triggered by exceedance and show conc as well in popup
+  dplyr::mutate(Date=as.Date(Date, format="%m/%d/%Y"), 
+                AnalyteName=factor(AnalyteName))# ifelse(AnalyteName=="Chlorine, Total Residual",sites[match(StationName, sites$station_code), "long"]$long, jitter(sites[match(StationName, sites$station_code), "long"]$long,100)) %>%   dplyr::arrange(AnalyteName)
+
+slct <- unique((df_chlo %>% 
+                  dplyr::group_by(StationName) %>% 
+                  dplyr::summarise(n=n())%>% 
+                  dplyr::filter(n==2))$StationName)
+
+df_chlo <- df_chlo %>% 
+  dplyr::filter(StationName %in% slct)
 
 
 
+# site data
+sites_chlo <- sites %>% 
+  dplyr::filter(station_code %in% df_chlo$StationName) %>%
+  dplyr::distinct(station_code, .keep_all=T)
+sites_chlo <- merge(sites_chlo[,c(1,6,7,10:12)], df_chlo[df_chlo$AnalyteName == "Chlorine, Free",c(1,2,5,6)], by.x="station_code", by.y="StationName") %>% 
+  dplyr::rename(free_chlo = Result, free_chlo_QA = ResQualCode)
+sites_chlo <- merge(sites_chlo, df_chlo[df_chlo$AnalyteName == "Chlorine, Total Residual",c(1,5,6)], by.x="station_code", by.y="StationName") %>%
+  dplyr::rename(tot_chlo = Result, tot_chlo_QA = ResQualCode)
+sites_chlo <- sites_chlo %>% 
+  dplyr::mutate(year=year(Date))
 
-
-
-
+# variables used in ui 
+chlo_vars_yr <- seq(min(sites_chlo$year), max(sites_chlo$year))
 
 
 # E - Customized functions that will be used in the app 

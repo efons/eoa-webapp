@@ -475,14 +475,36 @@ tabItem(tabName="con_temp",
 
 
 
+
+
 tabItem(tabName = "pathogens",
         h2("Bacterial Indicators"),
         h4("Under construction")),
         
-
-tabItem(tabName = "chlorine",
-        h2("Chlorine"),
-        h4("Under construction")),
+# Chlorine Menu Item
+tabItem(
+  tabName = "chlorine",
+  h2("Chlorine"),
+  h4("Under construction"), 
+  
+  # Box for inputs 
+  column(4,box(width=12, 
+               sliderInput(inputId="chlo_yr", label="Time period", min =min(chlo_vars_yr), max=max(chlo_vars_yr), value=c(min(chlo_vars_yr),max(chlo_vars_yr)), sep="",step=1),
+               br(),
+               downloadButton("downloadData_chlo", label = "Data"),
+               # Input: Choose file type ----
+               radioButtons("file_type_chlo", NULL, inline = T,
+                            choices = c(".csv", ".xlsx")))),
+  # Box for outputs 
+  column(8,tabBox(width=12,
+                  tabPanel(title="Map",
+                           leafletOutput("map_chlo")),
+                  tabPanel(title="Plot",plotOutput("plot_chlo", height="400px"),
+                           prettyCheckbox(inputId="show_bar_pct_chlo", label= "Show as %?"))))
+  
+  
+  
+),
 
 tabItem(tabName = "pesticide",
         h2("Pesticides"),

@@ -948,6 +948,98 @@ server <- (function(input, output, session) {
   
   
   
+  # Chlorine 
+  ##############################################################################################
+  
+  # data subset 
+  data_sub_chlo <- reactive({
+   
+    return(sites_chlo %>%  
+      dplyr::filter(year >= input$chlo_yr[1] & year <= input$chlo_yr[2]))
+    
+  })
+  
+  
+  # MAP 
+  output$map_chlo <- renderLeaflet({
+    leaflet() %>% 
+      addProviderTiles(providers$Esri.WorldTopoMap) %>% 
+      setView(lng = -122, lat = 37.4, zoom = 10)
+  })
+  
+  # Update map with user inputs 
+  observe({
+    
+    # wait for POC menu to be selected 
+    req(input$menu_items == "chlorine") 
+    
+
+    sites_chlo_sub <- data_sub_chlo()
+    
+    
+    popup_chlo <- paste(
+      sep="</br>", 
+      sites_chlo_sub$station_code,
+      "<b>Chlorine, Total Residual (mg/L):</b>",
+      paste(sites_chlo_sub$tot_chlo_QA, sites_chlo_sub$tot_chlo), 
+      "<b>Chlorine, Free (mg/L):</b>",
+      paste(sites_chlo_sub$free_chlo_QA, sites_chlo_sub$free_chlo),
+      paste0("<b>Date:</b> ",sites_chlo_sub$Date)
+    )
+    
+    
+    
+    get_color_chlo <- function(var) {
+      ifelse(var < 0.08, "green",
+             ifelse(var <0.1, "orange",
+                    "red"))
+    }
+    
+    # with sites df
+    leafletProxy("map_chlo") %>% clearMarkers() %>% clearShapes() %>% clearControls() %>%
+      addCircleMarkers(data=sites_chlo_sub, lat=sites_chlo_sub$lat, lng=sites_chlo_sub$long, 
+                       radius=7, 
+                       weight=1, color="blue", fillColor=get_color_chlo(sites_chlo_sub$tot_chlo), 
+                       fillOpacity = 0.9) %>%
+      addCircleMarkers(data=sites_chlo_sub, lat=sites_chlo_sub$lat, lng=sites_chlo_sub$long, 
+                       radius=4, 
+                       weight=1, color="blue", fillColor=get_color_chlo(sites_chlo_sub$free_chlo), 
+                       fillOpacity = 0.9,
+                       popup=popup_chlo)
+
+    
+  })
+  
+  
+  
+  # Download data 
+  output$downloadData_poc <- downloadHandler(
+    
+    filename = function() {
+      paste(input$poc_contaminant, "_table", Sys.Date(), input$file_type_poc, sep = "")
+    },
+    #   content = function(file) {
+    #      write.xlsx(data_sub(), file)
+    #   }
+    
+    content = function(file) {
+      
+      
+      data_to_dwn <- data_sub_poc() %>% 
+        select(c(3,2,1,5,6,4,7,8,9,10)) %T>% 
+        {names(.) <- c("County", "City", "Site ID", "Latitude", "Longitude", "Sampling Date", "PCB Concentration (mg/kg)", "Hg Concentration (mg/kg)", "Concentration Category (PCB)", "Concentration Category (Hg")}
+      
+      
+      if(input$file_type_poc== ".csv") {
+        write.csv(data_to_dwn, file, row.names = FALSE)
+      } else if(input$file_type == ".xlsx") {
+        write.xlsx(data_to_dwn, file)
+      }
+    }
+    
+  )
+  
+  
   
   
   ## Continuous water quality
