@@ -327,34 +327,41 @@ col_trashCat <-  c(rgb(166,219,160,maxColorValue = 255),
 
 
 # monitoring data
-df_chlo <- read_excel("All_chlorine_results_2012-2018.xlsx", sheet="SC (2)") %>%
+df_chlo <- read_excel("All_chlorine_results_2012-2018.xlsx", sheet="SC") %>%
   dplyr::filter(FieldReplicate == 1,
                 QACode == "None", 
                 !is.na(Result)) %>%  # all duplicate results in a year are deleted for now
   # for later: keep duplicate when triggered by exceedance and show conc as well in popup
   dplyr::mutate(Date=as.Date(Date, format="%m/%d/%Y"), 
-                AnalyteName=factor(AnalyteName))# ifelse(AnalyteName=="Chlorine, Total Residual",sites[match(StationName, sites$station_code), "long"]$long, jitter(sites[match(StationName, sites$station_code), "long"]$long,100)) %>%   dplyr::arrange(AnalyteName)
-
-slct <- unique((df_chlo %>% 
-                  dplyr::group_by(StationName) %>% 
-                  dplyr::summarise(n=n())%>% 
-                  dplyr::filter(n==2))$StationName)
-
-df_chlo <- df_chlo %>% 
-  dplyr::filter(StationName %in% slct)
-
+                AnalyteName=factor(AnalyteName),
+                fy = ifelse(month(Date)<=7, paste(year(Date)-1,"-",year(Date)),paste(year(Date),"-",year(Date+1)))) %>% 
+  dplyr::arrange(Date) %>%
+  dplyr::group_by(StationName, AnalyteName) %>% 
+  dplyr::summarize(n=n(),
+                  date_1 = first(Date),
+                  date_2 = nth(x=Date, n=2, default=NA), 
+                  date_3 = nth(x=Date, n=3, default=NA),
+                  result_1 = first(Result),
+                  result_2 = nth(x=Result, n=2, default=NA),
+                  result_3 = nth(x=Result, n=3, default=NA),
+                  qa_1 = first(ResQualCode),
+                  qa_2 = nth(x=ResQualCode, n=2, default=NA), 
+                  qa_3 = nth(x=ResQualCode, n=3, default=NA))
+  # ifelse(AnalyteName=="Chlorine, Total Residual",sites[match(StationName, sites$station_code), "long"]$long, jitter(sites[match(StationName, sites$station_code), "long"]$long,100)) %>%   dplyr::arrange(AnalyteName)
 
 
 # site data
 sites_chlo <- sites %>% 
   dplyr::filter(station_code %in% df_chlo$StationName) %>%
   dplyr::distinct(station_code, .keep_all=T)
-sites_chlo <- merge(sites_chlo[,c(1,6,7,10:12)], df_chlo[df_chlo$AnalyteName == "Chlorine, Free",c(1,2,5,6)], by.x="station_code", by.y="StationName") %>% 
-  dplyr::rename(free_chlo = Result, free_chlo_QA = ResQualCode)
-sites_chlo <- merge(sites_chlo, df_chlo[df_chlo$AnalyteName == "Chlorine, Total Residual",c(1,5,6)], by.x="station_code", by.y="StationName") %>%
-  dplyr::rename(tot_chlo = Result, tot_chlo_QA = ResQualCode)
+sites_chlo <- merge(sites_chlo[,c(1,6,7,10:12)], df_chlo[df_chlo$AnalyteName == "Chlorine, Free",c(1,4:12)], by.x="station_code", by.y="StationName") %>% 
+  dplyr::rename(free_chlo_1 = result_1, free_chlo_2 = result_2, free_chlo_3 = result_3,
+                free_chlo_qa_1 = qa_1,free_chlo_qa_2 = qa_2,free_chlo_qa_3 = qa_3)
+sites_chlo <- merge(sites_chlo, df_chlo[df_chlo$AnalyteName == "Chlorine, Total Residual",c(1,7:12)], by.x="station_code", by.y="StationName") %>%
+  dplyr::rename(tot_chlo_1 = result_1, tot_chlo_2 = result_2,tot_chlo_3 = result_3,  
+                tot_chlo_qa_1 = qa_1,tot_chlo_qa_2 = qa_2,tot_chlo_qa_3 = qa_3)
 sites_chlo <- sites_chlo %>% 
-  dplyr::mutate(year=year(Date))
+  dplyr::mutate(year=year(date_1))
 
 # variables used in ui 
 chlo_vars_yr <- seq(min(sites_chlo$year), max(sites_chlo$year))
@@ -456,7 +463,13 @@ Shiny.onInputChange("keyPressed", Math.random());
 '
 
 
-
+# Shading under curve
+shade_curve <- function(data=sites_chlo, zlimit, sign=">", fill = "red", alpha = .5){
+  if (sign==">"){geom_area(data = subset(data, tot_chlo_1 >= zlimit),
+            aes(y=y), fill = fill, color = NA, alpha = alpha)}
+    else geom_area(data = subset(data, tot_chlo_1 < zlimit),
+                  aes(y=y), fill = fill, color = NA, alpha = alpha)
+}
 
 
 

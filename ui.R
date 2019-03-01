@@ -481,6 +481,8 @@ tabItem(tabName = "pathogens",
         h2("Bacterial Indicators"),
         h4("Under construction")),
         
+
+
 # Chlorine Menu Item
 tabItem(
   tabName = "chlorine",
@@ -491,6 +493,14 @@ tabItem(
   column(4,box(width=12, 
                sliderInput(inputId="chlo_yr", label="Time period", min =min(chlo_vars_yr), max=max(chlo_vars_yr), value=c(min(chlo_vars_yr),max(chlo_vars_yr)), sep="",step=1),
                br(),
+               pickerInput(
+                 inputId = "chlo_ws",
+                 label = "Choose Watershed:",
+                 choices = as.character(bio_vars_ws),
+                 selected = as.character(bio_vars_ws),
+                 options = list(`actions-box` = TRUE, size = 20),
+                 multiple = T
+               ),
                downloadButton("downloadData_chlo", label = "Data"),
                # Input: Choose file type ----
                radioButtons("file_type_chlo", NULL, inline = T,
@@ -499,8 +509,7 @@ tabItem(
   column(8,tabBox(width=12,
                   tabPanel(title="Map",
                            leafletOutput("map_chlo")),
-                  tabPanel(title="Plot",plotOutput("plot_chlo", height="400px"),
-                           prettyCheckbox(inputId="show_bar_pct_chlo", label= "Show as %?"))))
+                  tabPanel(title="Plot",plotOutput("plot_chlo", height="400px"))))
   
   
   

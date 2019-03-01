@@ -955,7 +955,8 @@ server <- (function(input, output, session) {
   data_sub_chlo <- reactive({
    
     return(sites_chlo %>%  
-      dplyr::filter(year >= input$chlo_yr[1] & year <= input$chlo_yr[2]))
+      dplyr::filter(watershed %in% input$chlo_ws,
+                    year >= input$chlo_yr[1] & year <= input$chlo_yr[2]))
     
   })
   
@@ -979,13 +980,20 @@ server <- (function(input, output, session) {
     
     popup_chlo <- paste(
       sep="</br>", 
-      sites_chlo_sub$station_code,
+      paste0("<b>",sites_chlo_sub$station_code,"</b>", " (",sites_chlo_sub$date_1, ")"),
       "<b>Chlorine, Total Residual (mg/L):</b>",
-      paste(sites_chlo_sub$tot_chlo_QA, sites_chlo_sub$tot_chlo), 
+      paste(sites_chlo_sub$tot_chlo_qa_1, sites_chlo_sub$tot_chlo_1), 
       "<b>Chlorine, Free (mg/L):</b>",
-      paste(sites_chlo_sub$free_chlo_QA, sites_chlo_sub$free_chlo),
-      paste0("<b>Date:</b> ",sites_chlo_sub$Date)
+      paste(sites_chlo_sub$free_chlo_qa_1, sites_chlo_sub$free_chlo_1),
+      ifelse(!is.na(sites_chlo_sub$date_2),paste("</br><b>Resampled in:</b>", sites_chlo_sub$date_2,
+                                                   "</br>", "Free:", sites_chlo_sub$free_chlo_2, "-", "Total:", sites_chlo_sub$tot_chlo_2),""),
+      
+      ifelse(!is.na(sites_chlo_sub$date_3),paste("<b>Resampled in:</b>", sites_chlo_sub$date_3,
+                                                 "</br>", "Free:", sites_chlo_sub$free_chlo_3, "-", "Total:", sites_chlo_sub$tot_chlo_3),"")
+      
     )
+    
+    
     
     
     
@@ -999,11 +1007,11 @@ server <- (function(input, output, session) {
     leafletProxy("map_chlo") %>% clearMarkers() %>% clearShapes() %>% clearControls() %>%
       addCircleMarkers(data=sites_chlo_sub, lat=sites_chlo_sub$lat, lng=sites_chlo_sub$long, 
                        radius=7, 
-                       weight=1, color="blue", fillColor=get_color_chlo(sites_chlo_sub$tot_chlo), 
+                       weight=1, color="blue", fillColor=get_color_chlo(sites_chlo_sub$tot_chlo_1), 
                        fillOpacity = 0.9) %>%
       addCircleMarkers(data=sites_chlo_sub, lat=sites_chlo_sub$lat, lng=sites_chlo_sub$long, 
                        radius=4, 
-                       weight=1, color="blue", fillColor=get_color_chlo(sites_chlo_sub$free_chlo), 
+                       weight=1, color="blue", fillColor=get_color_chlo(sites_chlo_sub$free_chlo_1), 
                        fillOpacity = 0.9,
                        popup=popup_chlo)
 
@@ -1011,33 +1019,22 @@ server <- (function(input, output, session) {
   })
   
   
-  
-  # Download data 
-  output$downloadData_poc <- downloadHandler(
+  output$plot_chlo <- renderPlot({
+    data_sub <- data_sub_chlo()
     
-    filename = function() {
-      paste(input$poc_contaminant, "_table", Sys.Date(), input$file_type_poc, sep = "")
-    },
-    #   content = function(file) {
-    #      write.xlsx(data_sub(), file)
-    #   }
+    p <- ggplot(data=data_sub, aes(x=tot_chlo_1)) + geom_density(alpha=0.5)+ 
+      xlab("Total Residual (mg/L)") + ylab("Density") + 
+      coord_cartesian(xlim=c(0,0.4))
     
-    content = function(file) {
+    d <- ggplot_build(p)$data[[1]]
       
-      
-      data_to_dwn <- data_sub_poc() %>% 
-        select(c(3,2,1,5,6,4,7,8,9,10)) %T>% 
-        {names(.) <- c("County", "City", "Site ID", "Latitude", "Longitude", "Sampling Date", "PCB Concentration (mg/kg)", "Hg Concentration (mg/kg)", "Concentration Category (PCB)", "Concentration Category (Hg")}
-      
-      
-      if(input$file_type_poc== ".csv") {
-        write.csv(data_to_dwn, file, row.names = FALSE)
-      } else if(input$file_type == ".xlsx") {
-        write.xlsx(data_to_dwn, file)
-      }
+    if (nrow(subset(d,x>0.1))>0){
+           p <- p + geom_area(data = subset(d, x > 0.1), aes(x=x, y=y), fill="red")
     }
+     
+    return(p)
     
-  )
+  })
   
   
   
