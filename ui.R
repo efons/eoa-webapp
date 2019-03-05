@@ -213,60 +213,13 @@ Explore data, maps, graphs and interactive features as they become available."),
                       valueBoxOutput("vbox_pi", width=3),
                       valueBoxOutput("vbox_li",width=3)),
       
-      box(width = 12, id="stressor_var", title="Stressor Variables:",
-          collapsible = T, collapsed=T,
-          
-          
-          pickerInput(inputId = "size_by",
-                      label = tags$i("Explore the relationship between the selected score and potential Stressors by selecting a variable, and clicking the 'Detailed Plots' or 'Detailed Table' tabs below:"),
-                      choices = list(
-                        "Habitat" = c(
-                          "Total PHAB" = "tot_phab",
-                          "Epifaunal Substrate" =
-                            "epifaun_substr",
-                          "Sediment Deposition" = "sed_deposition",
-                          "Shannon Diversity (Natural Substrates)" = "shannon_nst",
-                          "% Substrate Smaller than Sand (<2 mm)" = "pct_smaller_sand",
-                          "Percent Boulders - large & small" = "pct_boulder_ls",
-                          "Percent Fast Water of Reach" =
-                            "pct_fast_water",
-                          "IPI Score" = "ipi",
-                          "% Impervious Area - Watershed" =
-                            "pct_imperv_ws",
-                          "Road density - Watershed" = "road_dsty_ws"
-                        ),
-                        "Biomass" = c(
-                          "Chlorophyll a (mg/m2)" = "chloro_a_mg_m2",
-                          "AFDM (g/m2)" = "afdm_g_m2",
-                          "% Macroalgae Cover" = "pct_macroalg_cvr"
-                        ),
-                        "Nutrients" = c(
-                          "Total Nitrogen (mg/L)" = "tn_mg_l",
-                          "Total Phosphorus(mg/L)" = "tp_mg_l",
-                          "Unionized Ammonia (ug/L)" = "uia_ug_l"
-                        ),
-                        "Water Quality" = c(
-                          "Temperature (C)" = "temp_c",
-                          "Dissolved Oxygen" =
-                            "do_mg_l",
-                          "Conductivity (uS/cm)" = "sp_cond_us_cm"
-                        ),
-                        "Other" = c("Human Disturbance Index (HDI)" = "crhdi_swamp")
-                      )
-                      ,
-                      selected = 'tot_phab',
-                      options = pickerOptions(actionsBox = F, liveSearch = T),
-                      multiple = F)
-          
-      ),
-      
       
       
       tabBox(id="all_outputs",
         width = 12,
        
       
-       tabPanel(title="Map", id="map",
+       tabPanel(title="Score Map", id="map",
         fluidRow(column(12, leafletOutput("map_sites"))),
         fluidRow(column(
           3, actionButton("reset_button", "Reset view")
@@ -279,19 +232,68 @@ Explore data, maps, graphs and interactive features as they become available."),
                    animation = "pulse",
                    fill = F
                  )))), 
-       tabPanel(title='Plot', id="summary_plot",
+       tabPanel(title='Score Plot', id="summary_plot",
                 plotOutput("barplot"),      
                 prettyCheckbox(inputId="show_bar_pct", label= "Show as %?")
        ),
        
        
        tabPanel(
-         title = "Detailed Plots",
+         title = "Score vs. Stressors",
+         
          div(id = "detailed_plots",
            style = "overflow-y: scroll; height: 700px",
            
-           tags$i(h5("Select a potential stressor variable in the dropdown menu above to explore its relationship to creek health scores.")),
-           br(),
+           
+           
+           
+        tags$i(h5("Select a potential stressor variable in the dropdown menu below to explore its relationship to creek health scores.")),
+           
+         
+         pickerInput(inputId = "size_by",
+                     label = NULL,
+                     choices = list(
+                       "Habitat" = c(
+                         "Total PHAB" = "tot_phab",
+                         "Epifaunal Substrate" =
+                           "epifaun_substr",
+                         "Sediment Deposition" = "sed_deposition",
+                         "Shannon Diversity (Natural Substrates)" = "shannon_nst",
+                         "% Substrate Smaller than Sand (<2 mm)" = "pct_smaller_sand",
+                         "Percent Boulders - large & small" = "pct_boulder_ls",
+                         "Percent Fast Water of Reach" =
+                           "pct_fast_water",
+                         "IPI Score" = "ipi",
+                         "% Impervious Area - Watershed" =
+                           "pct_imperv_ws",
+                         "Road density - Watershed" = "road_dsty_ws"
+                       ),
+                       "Biomass" = c(
+                         "Chlorophyll a (mg/m2)" = "chloro_a_mg_m2",
+                         "AFDM (g/m2)" = "afdm_g_m2",
+                         "% Macroalgae Cover" = "pct_macroalg_cvr"
+                       ),
+                       "Nutrients" = c(
+                         "Total Nitrogen (mg/L)" = "tn_mg_l",
+                         "Total Phosphorus(mg/L)" = "tp_mg_l",
+                         "Unionized Ammonia (ug/L)" = "uia_ug_l"
+                       ),
+                       "Water Quality" = c(
+                         "Temperature (C)" = "temp_c",
+                         "Dissolved Oxygen" =
+                           "do_mg_l",
+                         "Conductivity (uS/cm)" = "sp_cond_us_cm"
+                       ),
+                       "Other" = c("Human Disturbance Index (HDI)" = "crhdi_swamp")
+                     )
+                     ,
+                     selected = 'tot_phab',
+                     options = pickerOptions(actionsBox = F, liveSearch = T),
+                     multiple = F), 
+        
+        tags$head(tags$style(".selectpicker {z-index:99999 !important;}")),
+        
+            br(),
            div(style = "font-weight:bold", textOutput("ws_list_2")),
            br(),           
            div(style = "font-weight:bold", textOutput("scatterplots")),
@@ -313,7 +315,6 @@ Explore data, maps, graphs and interactive features as they become available."),
          div(id = "detailed_table",
            style = "overflow-y: scroll; height: 700px",
            
-           tags$i(h5("Select a potential stressor variable in the dropdown menu above to explore its relationship to creek health scores.")),
            tags$i(h5("You can download this table, as well as all the other monitoring results for the selected watersheds and time period, using the 'Download Data' tool on the left of the page.")),
            br(),
            div(style = "font-weight:bold", textOutput("ws_list_1")),
@@ -517,7 +518,22 @@ tabItem(
 
 tabItem(tabName = "pesticide",
         h2("Pesticides"),
-        h4("Under Construction")),
+        h4("Under Construction"), 
+        
+        # Box for inputs 
+        column(4,box(width=12, 
+                     sliderInput(inputId="tox_yr", label="Year",min=min(tox_vars_yr),max=max(tox_vars_yr), value=2018, step=1, sep=""),                     br(),
+                     selectInput(inputId="tox_season", label="Season", choices=c("Wet"="W","Dry"= "D"), selected="D"),
+                     uiOutput("stressors"),
+                     downloadButton("downloadData_tox", label = "Data"),
+                     # Input: Choose file type ----
+                     radioButtons("file_type_tox", NULL, inline = T,
+                                  choices = c(".csv", ".xlsx")))),
+        # Box for outputs 
+        column(8,tabBox(width=12,
+                        tabPanel(title="Map",
+                                 leafletOutput("map_tox")),
+                        tabPanel(title="Plot",plotOutput("plot_tox", height="400px"))))),
 
 
 

@@ -737,7 +737,6 @@ server <- (function(input, output, session) {
         addLegendCustom(
           position = "topright",
           opacity = 1,
-          borders = c("white", 'white', 'white', "white"),
           colors = colors_bio,
           labels = c(
             "Likely Intact",
@@ -1020,6 +1019,7 @@ server <- (function(input, output, session) {
   
   
   output$plot_chlo <- renderPlot({
+    if (nrow(data_sub_chlo())>0){ 
     data_sub <- data_sub_chlo()
     
     p <- ggplot(data=data_sub, aes(x=tot_chlo_1)) + geom_density(alpha=0.5)+ 
@@ -1033,7 +1033,7 @@ server <- (function(input, output, session) {
     }
      
     return(p)
-    
+    }
   })
   
   
@@ -1749,7 +1749,151 @@ server <- (function(input, output, session) {
  
   })  
 
- 
+  
+  
+  
+  
+  # Pesticides 
+  ################################################################################################################################
+  
+  
+  
+  # stressors : sediment chemistry or water pesticides 
+  output$stressors <- renderUI({ 
+    if(input$tox_season == "D"){
+      pickerInput(inputId="dry_stressors", label="Stressors:", 
+                  choices=list("Metals" = c("Arsenic", "Cadmium", "Chromium", "Copper", "Lead", "Nickel"),
+                               "Pesticides" = c("Pyrethroid", "Other Pesticides")), selected=tox_vars_stressors_dry[1],
+                  options = pickerOptions(liveSearch = T)
+      )
+      
+    }
+    else {NULL}
+  })
+  
+  # data subsetting
+  
+  tox_data_sub <- reactive({
+    req(!is.null(input$dry_stressors))
+    data_sub <- df_tox %>% 
+      dplyr::filter(year == input$tox_yr, 
+                    season == input$tox_season)
+    data_sub_chem <- df_sedPest %>% 
+      dplyr::filter(year == input$tox_yr,
+                    AnalyteName == input$dry_stressors) %>% 
+      dplyr::select(c(1,3,4,5)) %T>% 
+      {names(.) <- c("StationCode", "StressorName", "StressorQuotient","StressorTrigger")}
+    
+    sites_sub <- sites_tox %>% 
+      filter(StationCode %in% data_sub$StationCode,
+             year(SampleDate)==input$tox_yr) %>% 
+      dplyr::distinct(StationCode, .keep_all=T)
+    
+    if(nrow(data_sub )>0){
+      # filter for First vs. follow up
+      sites_sub <- merge(sites_sub, (data_sub %>% 
+                                       dplyr::filter(sampleType == "First",
+                                                     SigEffect %in% c("Fail","SL")) %>% 
+                                       dplyr::group_by(StationCode) %>%
+                                       dplyr::summarize(n_fail=n(),
+                                                        species_fail = paste(organism_u, collapse="and"),
+                                                        species_pct = paste(organism_u, " with ",PercentEffect, " % Effect", sep="",collapse=" and ")) %>%
+                                       as.data.frame()),all=T) %>% 
+        dplyr::mutate(n_fail = ifelse(is.na(n_fail), 0,n_fail))
+      
+      sites_sub$followups <- sapply(seq(1:nrow(sites_sub)), function(x) 
+        
+        ifelse(length(df_tox[df_tox$StationCode == sites_sub$StationCode[x] & df_tox$sampleType == "Follow-up"
+                             & df_tox$year == input$tox_yr & df_tox$season == input$tox_season & 
+                               df_tox$organism_u %in% strsplit(sites_sub$species_fail, split="and"),"SigEffect"]) > 0, 
+               
+               
+               paste(
+                 df_tox[df_tox$StationCode == sites_sub$StationCode[x] & df_tox$sampleType == "Follow-up" &
+                          df_tox$year == input$tox_yr & df_tox$season == input$tox_season & 
+                          df_tox$organism_u %in% strsplit(sites_sub$species_fail,split="and"),"organism_u"],": ",
+                 df_tox[df_tox$StationCode == sites_sub$StationCode[x] & df_tox$sampleType == "Follow-up" &
+                          df_tox$year == input$tox_yr & df_tox$season == input$tox_season & 
+                          df_tox$organism_u %in% strsplit(sites_sub$species_fail,split="and"),"SigEffect"], " with ",
+                 df_tox[df_tox$StationCode == sites_sub$StationCode[x] & df_tox$sampleType == "Follow-up" &
+                          df_tox$year == input$tox_yr & df_tox$season == input$tox_season & 
+                          df_tox$organism_u %in% strsplit(sites_sub$species_fail,split="and"),"PercentEffect"], "% Effect",
+                 sep="", collapse="and"), 
+               "None"
+        ))
+      
+      sites_sub <- merge(sites_sub,data_sub_chem, all=T)
+      
+      return(sites_sub)
+      
+      
+    }
+    else return(data.frame())
+    
+    
+    
+  })
+  
+  
+  output$map_tox <- renderLeaflet({
+    leaflet() %>%
+      addProviderTiles(providers$Esri.WorldTopoMap) %>%
+      setView(lng = -122,
+              lat = 37.3,
+              zoom = 9) %>% 
+      addLegendCustom("topright", title="Significant toxicity to...",colors=colors_tox, labels=c("0 species","1 species","2 species","3 species"), shapes=rep("circle",4), sizes=rep(10,4)) %>% 
+      
+      addLegend("bottomright", title="Stressor Concentration",colors=c(colors_chem, "grey"), labels=c("Below Threshold", "Above Threshold", "No data for this stressor"))
+  })
+  
+  
+  observe({
+    
+    req(input$menu_items == "pesticide")
+    leafletProxy("map_tox") %>% clearMarkers() %>% clearShapes()
+    
+    sites_sub <- tox_data_sub()
+    
+    get_color_chem <- function(trigger){ 
+      if (input$tox_season == "D") 
+      {colors <- colors_chem[trigger+1]
+      colors[is.na(colors)] <- "grey"
+      return(colors)}
+      else "grey"} 
+    
+    
+    if (nrow(sites_sub) >0){
+      
+      popup_tox <- paste(
+        sep="</br>", 
+        sites_sub$StationCode, 
+        ifelse(sites_sub$n_fail >= 1, 
+               paste("<b> Significant Toxicity for: </b></br>", 
+                     sites_sub$species_pct,
+                     "</br><b>Follow-ups?</b>","</br>", 
+                     sites_sub$followups
+                     
+               ), 
+               "<b>No significant toxicity</b>")
+        
+        
+        
+      )
+      
+      leafletProxy("map_tox") %>%
+        addRectangles(data=sites_sub %>% na.omit(), 
+                      lat1=sites_sub$TargetLatitude-0.02, lng1=sites_sub$TargetLongitude-0.02,
+                      lat2=sites_sub$TargetLatitude+0.02, lng2=sites_sub$TargetLongitude+0.02,
+                      fillColor=get_color_chem(sites_sub$StressorTrigger), fillOpacity=0.5, opacity=0,
+                      label=paste("Stressor Quotient:", signif(sites_sub$StressorQuotient,2)))    %>%
+        addCircleMarkers(data=sites_sub, lat=sites_sub$TargetLatitude, 
+                         lng=sites_sub$TargetLongitude,
+                         fillColor=colors_tox[sites_sub$n_fail+1], label=paste(sites_sub$n_fail),
+                         fillOpacity=0.8, weight=1, radius=6, 
+                         popup=popup_tox) 
+    }
+  })
+  
   
 })
 

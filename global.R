@@ -367,12 +367,121 @@ sites_chlo <- sites_chlo %>%
 chlo_vars_yr <- seq(min(sites_chlo$year), max(sites_chlo$year))
 
 
-# E - Customized functions that will be used in the app 
+
+
+
+# F - Pesticide data
+#############################################################################################################################################
+#############################################################################################################################################
+
+
+# sites data
+sites_tox <-  read_excel("data_pesticides_2012_18.xlsx" , sheet="Site Info") %>% 
+  dplyr::filter(!is.na(TargetLongitude)) %>% 
+  dplyr::mutate(TargetLongitude = as.numeric(TargetLongitude),
+                TargetLatitude = as.numeric(TargetLatitude))
+
+# Toxicity Data
+df_tox <- read_excel("data_pesticides_2012_18.xlsx" , sheet="ToxSummary") %>% 
+  dplyr::mutate(season = ifelse(month(SampleDate)<5, "W", "D"),
+                year= year(SampleDate),
+                organism_u = paste0(OrganismName, " (", AnalyteName,")"),
+                PercentEffect = signif(PercentEffect, 2))
+
+events_each_year <- df_tox %>% 
+  dplyr::arrange(SampleDate) %>% 
+  dplyr::group_by(year, season, StationCode) %>% 
+  dplyr::summarise(date_event=dplyr::first(SampleDate),
+                   n=n())
+
+df_tox$main_events <- sapply(seq(1:nrow(df_tox)), 
+                             function(x) as.Date(events_each_year$date_event[which(events_each_year$year == df_tox$year[x] & 
+                                                                                     events_each_year$season == df_tox$season[x] & 
+                                                                                     events_each_year$StationCode == df_tox$StationCode[x])]))
+df_tox <- df_tox %>% 
+  dplyr::mutate(
+    main_events=as.Date(main_events, origin="1970-01-01"),
+    sampleType = ifelse(month(SampleDate) == month(main_events), "First", "Follow-up")) %>% 
+  as.data.frame()
+
+
+
+# Sediment pesticides data (DRY season) 
+df_sedPest <- read_excel("data_pesticides_2012_18.xlsx" , sheet="SedPesticides") %>% 
+  dplyr::mutate(year=year(OrigSampleDate)) %>% 
+  as.data.frame()
+ref_sedPest <- read_excel("data_pesticides_2012_18.xlsx" , sheet="ToxRefInfo")
+
+df_sedPest_metals <- df_sedPest %>% 
+  dplyr::filter(AnalyteName %in% ref_sedPest$AnalyteName) %>% 
+  dplyr::mutate(AnalyteCat = ref_sedPest$AnalyteCat[match(AnalyteName, ref_sedPest$AnalyteName)],
+                RefValue = ref_sedPest$RefValue[match(AnalyteName, ref_sedPest$AnalyteName)]) %>% 
+  dplyr::filter(AnalyteCat %in% c("Metal")) %>%
+  # for now
+  dplyr::mutate(conc_quotient = Result / RefValue,
+                trigger = (Result/RefValue > 1))
+
+df_sedPest_pyre <- df_sedPest %>% 
+  dplyr::mutate(AnalyteName = ifelse(AnalyteName == "Cyhalothrin, lambda, total", "Cyhalothrin, Total lambda-", AnalyteName),
+                Result = ifelse(Result<0, abs(Result)/2, Result)) %>% 
+  dplyr::filter(AnalyteName %in% c(ref_sedPest$AnalyteName[ref_sedPest$AnalyteCat == "Pyrethroid"],"Fipronil")) %>% 
+  dplyr::mutate(AnalyteCat = ref_sedPest$AnalyteCat[match(AnalyteName, ref_sedPest$AnalyteName)],
+                RefValue = ref_sedPest$RefValue[match(AnalyteName, ref_sedPest$AnalyteName)])
+
+df_sedPest_pyre$conc_quotient <- sapply(1:nrow(df_sedPest_pyre), function(x) 
+  df_sedPest_pyre$Result[x]*100/(1000*df_sedPest_pyre$RefValue[x]*mean(df_sedPest$Result[df_sedPest$OrigStationCode == df_sedPest_pyre$OrigStationCode[x] & df_sedPest$year == df_sedPest_pyre$year[x] & df_sedPest$AnalyteName == "Total Organic Carbon"])))
+df_sedPest_pyre <- df_sedPest_pyre %>% 
+  dplyr::group_by(OrigStationCode,year,AnalyteCat) %>% 
+  dplyr::summarise(conc_quotient = sum(conc_quotient)) %>% 
+  dplyr::rename(AnalyteName = AnalyteCat) %>% 
+  dplyr::mutate(trigger = conc_quotient > 1) %>% 
+  as.data.frame()
+
+
+pahs <- c("Acenaphthene","Acenaphthylene","Anthracene","Benz(a)anthracene","Benzo(a)pyrene","Benzo(b)fluoranthene",
+          "Benzo(e)pyrene","Benzo(g,h,i)perylene","Benzo(k)fluoranthene" ,"Biphenyl",
+          "Chlordane, cis-" , "Chlordane, trans-" , "Chloroxuron(Surrogate)" , 
+          "Chrysene", "Dibenz(a,h)anthracene", 
+          "Decachlorobiphenyl(Surrogate)", "Dibenzothiophene", "Dimethylnaphthalene, 2,6-","Fluoranthene", "Fluorene" ,"Fluorobiphenyl, 2-(Surrogate)",
+          "Indeno(1,2,3-c,d)pyrene","Methylnaphthalene, 1-" , "Methylnaphthalene, 2-",  "Methylphenanthrene, 1-" ,
+          "Naphthalene" , "Nitrobenzene-d5(Surrogate)", "Perylene" ,  "Phenanthrene", "Pyrene", "Terphenyl-d14(Surrogate)" ,
+          "Tetrachloro-m-xylene(Surrogate)")
+
+df_sedPest_pah <- df_sedPest %>% 
+  dplyr::filter(AnalyteName %in% pahs) %>% 
+  dplyr::mutate(AnalyteCat = "Total PAHs",
+                RefValue = ref_sedPest$RefValue[match("Total PAHs", ref_sedPest$AnalyteName)],
+                Result = ifelse(Result<0, abs(Result)/2*DilFactor, Result)) %>% 
+  dplyr::group_by(OrigStationCode, year, AnalyteCat) %>%
+  dplyr::summarise(conc = sum(Result),
+                   conc_quotient = sum(Result)/first(RefValue))
+
+
+
+
+
+df_sedPest <- rbind(df_sedPest_metals %>% 
+                      dplyr::select(c(3,17,7,20,21)), df_sedPest_pyre)
+
+
+# for app
+tox_vars_yr <- seq(min(df_tox$year), max(df_tox$year))
+colors_tox <- c("blue", "orange", "red", "purple")
+tox_vars_stressors_dry <- sort(unique(df_sedPest$AnalyteName))
+colors_chem <- c("blue", "red")
+
+
+
+
+
+
+
+# G - Customized functions that will be used in the app 
 #############################################################################################################################################
 #############################################################################################################################################
 
 # Custom legend for leaflet maps function 
-addLegendCustom <- function(map, position, colors, labels, sizes, shapes, borders, opacity = 0.5, title=NULL){
+addLegendCustom <- function(map, position, colors=c("blue"), labels, sizes=c(10), shapes=c("circle"), opacity = 0.5, title=NULL){
   
   make_shapes <- function(colors, sizes, borders, shapes) {
     n <- length(shapes)
@@ -381,7 +490,7 @@ addLegendCustom <- function(map, position, colors, labels, sizes, shapes, border
       if (!shapes[i]=="triangle"){
         shapes[i] <- gsub("circle", "50%", shapes[i])
         shapes[i] <- gsub("square", "0%", shapes[i])
-        out[i] <- paste0(colors[i], "; width:", sizes[i], "px; height:", sizes[i], "px; border:1px solid ", borders[i], "; border-radius:", shapes[i])
+        out[i] <- paste0(colors[i], "; width:", sizes[i], "px; height:", sizes[i], "px; border:1px solid ", "; border-radius:", shapes[i])
       } 
       
       else {out[i] <- paste0("display: block;",
