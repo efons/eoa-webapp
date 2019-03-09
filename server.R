@@ -1880,7 +1880,7 @@ server <- (function(input, output, session) {
         
       )
       
-      leafletProxy("map_tox") %>%
+      leafletProxy("map_tox") %>% clearMarkers() %>% clearShapes() %>% 
         addRectangles(data=sites_sub %>% na.omit(), 
                       lat1=sites_sub$TargetLatitude-0.02, lng1=sites_sub$TargetLongitude-0.02,
                       lat2=sites_sub$TargetLatitude+0.02, lng2=sites_sub$TargetLongitude+0.02,
@@ -1893,6 +1893,45 @@ server <- (function(input, output, session) {
                          popup=popup_tox) 
     }
   })
+  
+  
+  # Pathogens
+  ##########################################################################################################
+  
+  data_sub_patho <- reactive({
+    df_patho %>% 
+      dplyr::filter(year >= input$patho_yr[1] & year <=input$patho_yr[2],
+                    Analyte== input$patho_analyte) %>% 
+      dplyr::arrange(desc(year))
+  })
+  
+  
+  output$map_patho <- renderLeaflet({
+    leaflet() %>% 
+      addProviderTiles(providers$Esri.WorldTopoMap) %>%
+      setView(lng = -121.8,
+              lat = 37.3,
+              zoom = 9)
+  })
+  
+  
+  observe({
+    req(input$menu_items == "pathogens")
+    
+    data_sub <- data_sub_patho()
+    popup_patho <- paste(sep="</br>",
+                         "<b>Station Code:</b>", 
+                         data_sub$Station_Code, 
+                         paste("<b>",input$patho_analyte, "concentration (MPN/100mL):</b>",
+                               data_sub$Result))
+    
+    leafletProxy("map_patho") %>% clearMarkers() %>% clearMarkerClusters() %>%
+      addCircleMarkers(lng=data_sub$Longitude, lat= data_sub$Latitude, color= patho_col[data_sub$exceedance+1], 
+                       popup = popup_patho, fillOpacity = 0.8, radius=10,label= paste(data_sub$year),
+                       clusterOptions = markerClusterOptions(showCoverageOnHover = F, freezeAtZoom = 15
+                       )
+      )
+  })  
   
   
 })

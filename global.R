@@ -473,10 +473,31 @@ colors_chem <- c("blue", "red")
 
 
 
+# G - Upload pathogen data 
+#############################################################################################################################################
+#############################################################################################################################################
+
+patho_threshold <- data.frame(Analyte=c("Coliform, Fecal", "Enterococcus", "E. coli"), 
+                              threshold=c(400,130,410))
+df_patho <- read_excel("pathogens_2014_18.xlsx") %>%  
+  dplyr::filter(!Analyte == "Coliform, Total")%>%
+  dplyr::mutate(Date=as.Date(Date), 
+                year=year(Date), 
+                Analyte=factor(Analyte), 
+                Latitude = ifelse(is.na(Latitude), sites$lat[match(Station_Code, sites$station_code)],Latitude),
+                Longitude = ifelse(is.na(Longitude), sites$long[match(Station_Code, sites$station_code)],Longitude),
+                exceedance = Result > (patho_threshold$threshold[match(Analyte, patho_threshold$Analyte)])
+  )
+
+patho_vars_analyte <- sort(unique(df_patho$Analyte))
+patho_col <- c("green","red")
 
 
 
-# G - Customized functions that will be used in the app 
+
+
+
+# H - Customized functions that will be used in the app 
 #############################################################################################################################################
 #############################################################################################################################################
 

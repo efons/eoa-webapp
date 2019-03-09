@@ -480,7 +480,31 @@ tabItem(tabName="con_temp",
 
 tabItem(tabName = "pathogens",
         h2("Bacterial Indicators"),
-        h4("Under construction")),
+        h4("Under construction"),
+        
+        # Box for inputs 
+        column(4,box(width=12, 
+                     sliderInput(inputId="patho_yr", label="Choose year:", min =min(df_patho$year), max=max(df_patho$year), value=c(min(df_patho$year),max(df_patho$year)), sep="",step=1),
+                     br(),
+                     selectInput(
+                       inputId = "patho_analyte",
+                       label = "Choose Bacterial Indicator:",
+                       choices = patho_vars_analyte,
+                       selected = "E. coli"
+                     ),
+                     downloadButton("downloadData_patho", label = "Data"),
+                     # Input: Choose file type ----
+                     radioButtons("file_type_patho", NULL, inline = T,
+                                  choices = c(".csv", ".xlsx")))),
+        # Box for outputs 
+        column(8,tabBox(width=12,
+                        tabPanel(title="Map",
+                                 leafletOutput("map_patho")),
+                        tabPanel(title="Plot",plotOutput("plot_patho", height="400px"))))
+        
+        
+        
+        ),
         
 
 
