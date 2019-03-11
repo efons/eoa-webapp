@@ -88,26 +88,26 @@ df_bio <- read_excel("data_master_bio_2012_18.xlsx", sheet="All",na=c("","NR", "
 old_param_names <- c("Elevation (m)", "BMI Taxa", "Diatom Taxa", "CSCI","D18", "ASCI Hybrid", "ASCI diatoms", "Shannon Diversity (H) of Natural Substrate Types",'Percent Substrate Smaller than Sand (<2 mm)',"Percent Impervious", "Road Density Watershed", "Total N", "Chlorophyll a (mg/m2)", '% Macroalgae Cover', "Mean Filamentous Algae Cover", "IPI Score", "Epifaunal Substrate", "Sediment Deposition", "Channel Alteration", "Total PHAB")
 
 select_param <- c("rmc_id","wb_id","year","sample_date", 
-                  "bmi_taxa", "diatom_taxa", "csci", "d18", "h20", "s2","asci_hyb","asci_diatom", "asci_soft_alg",
+                  "bmi_taxa", "diatom_taxa", "csci", "d18", "h20", "s2","asci_hyb","asci_diatom", "asci_soft_alg", "cram",
                   "do_mg_l","ph","alkalinity_mg_l", "sp_cond_us_cm", "temp_c", # water quality
-                  "tn_mg_l", "tp_mg_l", "uia_ug_l", # Nutrients 
-                  "chloro_a_mg_m2", 'pct_macroalg_cvr', "filam_alg_cvr", "afdm_g_m2",# biomass indicators 
-                  "ipi", "tot_phab", # Physical Habitat
+                  "chloride_mg_l",  "tn_mg_l", "tp_mg_l", "uia_ug_l", # Water chemistry
+                  "chloro_a_mg_m2", 'pct_macroalg_cvr', "filam_alg_cvr", "afdm_g_m2",# algal biomass indicators 
+                  "tot_phab", # Physical Habitat
                   "epifaun_substr", "sed_deposition", # PHAB components
-                  "shannon_nst", "pct_smaller_sand", "pct_boulder_ls", "pct_fast_water",# physical habitat metric scores
-                  "crhdi_swamp") 
+                  "shannon_nst", "pct_smaller_sand", "pct_boulder_ls", "pct_fast_water", "pct_slow_water",# physical habitat metric scores
+                  "crhdi_swamp" ) # habitat   
 
 full_names <- c("RMC Station ID","Water Board ID", "Water Year", "Sample Date",
-                "Total BMI Taxa", "Total Diatom Taxa", "CSCI Score",'D18 IBI Score',"S2 IBI Score","H20 IBI Score","ASCI Hybrid Score", "ASCI Diatom Score", "ASCI Soft Algae",
-                "Dissolved Oxygen (mg/L)", "pH", "Alkalinity (as CaCO3, mg/L)", "Conductivity (uS/cm)", "Temperature (C)",
+                "Total BMI Taxa", "Total Diatom Taxa", "CSCI Score",'D18 IBI Score',"S2 IBI Score","H20 IBI Score","ASCI Hybrid Score", "ASCI Diatom Score", "ASCI Soft Algae", "CRAM Score", 
+                "Dissolved Oxygen (mg/L)", "pH", "Alkalinity (as CaCO3, mg/L)", "Conductivity (uS/cm)", "Temperature (C)", "Chloride (mg/L)", 
                 "Total Nitrogen (mg/L)", "Total Phosphorus (mg/L)", "Unionized Ammonia (ug/L)",
                 "Chlorophyll a (mg/m2)", '% Macroalgae Cover', "Mean Filamentous Algae Cover (%)", "AFDM (g/m2)",
-                "IPI Score", "Total PHAB",
+                "Total PHAB",
                 "Epifaunal Substrate", "Sediment Deposition",
-                'Shannon Diversity (H) of Natural Substrate Types','% Substrate Smaller than Sand (<2 mm)', 'Percent Boulders - large & small', 'Percent Fast Water of Reach',
-                "Human Disturbance Index")
+                'Shannon Diversity (H) of Natural Substrate Types','% Substrate Smaller than Sand (<2 mm)', 'Percent Boulders - large & small', 'Percent Fast Water of Reach','Percent Slow Water of Reach',
+                "Human Disturbance Index") # Habitat 
 
-param_names <- data.frame(fullname=c("Watershed","Creek",full_names,"Percent Impervious - Watershed", "Road Density - Watershed"), dataname=c("ws", "creek", select_param, "pct_imperv_ws", "road_dsty_ws")) # add all other parameters from site file
+param_names <- data.frame(fullname=c("Watershed","Creek",full_names,"Percent Impervious - 5K", "Percent Urban - 5K", "Road Density - 5K"), dataname=c("ws", "creek", select_param, "pct_imperv_5k", "pct_urban_5k","road_dsty_5k")) # add all other parameters from site file
 
 
 # subset bioassessment data
@@ -122,9 +122,11 @@ df_bio <- df_bio %>% filter(year %in% seq(2012,2018,1)) %>% dplyr::select(select
          ws = sites$watershed[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
          subws = sites$subwatershed[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
          creek= sites$creek[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
-         pct_imperv_ws=sites$pct_imperv_ws[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
-         road_dsty_ws=sites$road_dsty_ws[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)]) %>%
-  mutate(pct_imperv_ws =  pct_imperv_ws * 100) %>% 
+         pct_imperv_5k=sites$pct_imperv_5k[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
+         road_dsty_5k=sites$road_dsty_5k[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
+         pct_urban_5k=sites$pct_urban_5k[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)]) %>%
+  mutate(pct_imperv_5k =  pct_imperv_5k * 100,
+         pct_urban_5k =  pct_urban_5k * 100) %>% 
   mutate(ws = factor(ws, levels=sort(unique(ws))),
          subws = factor(subws, levels=sort(unique(subws))))
 
@@ -132,12 +134,19 @@ df_bio <- df_bio %>% filter(year %in% seq(2012,2018,1)) %>% dplyr::select(select
 
 # Variables that will be used in ui and server
 bio_vars_yr <- unique(df_bio$year)
-bio_vars_filter <- data.frame(param=c("csci", "asci_hyb", "asci_diatom", "asci_soft_alg", 's2',"d18", 'h20',"tot_phab"),
-                          name= c("CSCI Score", "ASCI Hybrid Score", "ASCI Diatom Score", "ASCI Soft Algae","S2 Benthic Algae Score", "D18 Benthic Algae Score","H20 Benthic Algae Score", "Total PHAB"),
-                          threshold0=rep(0,8),
-                          threshold1=c(0.63, 0.7, 0.63, 0.68, 29, 49,54, 15),
-                          threshold2=c(0.79, 0.83, 0.8, 0.82, 47, 62, 63, 30),
-                          threshold3=c(0.92, 0.93, 0.92, 0.93, 60,72, 70, 46)) # NB: set threshold to -1 when no threshold 
+bio_vars_filter <- data.frame(param=c("csci", "asci_hyb", "asci_diatom", "asci_soft_alg", 's2',"d18", 'h20',"tot_phab", "cram"),
+                          name= c("CSCI Score", "ASCI Hybrid Score", "ASCI Diatom Score", "ASCI Soft Algae","S2 Benthic Algae Score", "D18 Benthic Algae Score","H20 Benthic Algae Score", "Total PHAB", "CRAM Score"),
+                          threshold0=rep(0,9),
+                          threshold1=c(0.63, 0.7, 0.63, 0.68, 29, 49,54, 15, 63),
+                          threshold2=c(0.79, 0.83, 0.8, 0.82, 47, 62, 63, 30,72),
+                          threshold3=c(0.92, 0.93, 0.92, 0.93, 60,72, 70, 46,79)) # NB: set threshold to -1 when no threshold 
+bio_score_list <- list("California Stream Condition Index (CSCI)"=c('Indicator: Benthic Macroinvertebrate'="csci"),
+     "Algae Stream Condition Indices (ASCIs)"=c("Indicator: Soft Algae"="asci_soft_alg",
+                                                "Indicator: Diatoms" = "asci_diatom",
+                                                "Indicator: Diatoms-Soft Algae (Hybrid)" = "asci_hyb"
+     ),
+     "Riparian Habitat Condition" = c("CRAM Score" = "cram")
+)
 bio_vars_ws <- sort(factor(unique(sheds$SYSTEM), levels=sort(unique(as.character(sheds$SYSTEM)))))
 
 colors_bio <- c(rgb(166,219,160,maxColorValue = 255), 

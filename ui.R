@@ -18,7 +18,7 @@ ui_db <- dashboardPage(
   
   # Header: Page title
   dashboardHeader(title = "Creek Monitoring Data", titleWidth = 250),
-  
+
   
   # Sidebar with different types of monitoring data
   dashboardSidebar(
@@ -128,12 +128,7 @@ Explore data, maps, graphs and interactive features as they become available."),
             inputId = "filter_by",
             label = NULL,
             choices = 
-              list("California Stream Condition Index (CSCI)"=c('Indicator: Benthic Macroinvertebrate'="csci"),
-                   "Algae Stream Condition Indices (ASCIs)"=c("Indicator: Soft Algae"="asci_soft_alg",
-                                                      "Indicator: Diatoms" = "asci_diatom",
-                                                      "Indicator: Diatoms-Soft Algae (Hybrid)" = "asci_hyb"
-                                                      )
-                   ),
+              bio_score_list,
             selected = "csci",
             multiple=F
           ), offset=4
@@ -176,8 +171,7 @@ Explore data, maps, graphs and interactive features as they become available."),
                    ),
                   
                    uiOutput("scnd_sub_ws"),
-                          tags$head(tags$style(".leaflet-top {z-index:999!important;}")),
-                 
+
               
                 
                  br(),
@@ -241,18 +235,18 @@ Explore data, maps, graphs and interactive features as they become available."),
        tabPanel(
          title = "Score vs. Stressors",
          
-         div(id = "detailed_plots",
-           style = "overflow-y: scroll; height: 700px",
-           
-           
-           
-           
-        tags$i(h5("Select a potential stressor variable in the dropdown menu below to explore its relationship to creek health scores.")),
-           
+         tags$i(h5("Select a potential stressor variable in the dropdown menu below to explore its relationship to creek health scores.")),
+         
          
          pickerInput(inputId = "size_by",
                      label = NULL,
                      choices = list(
+                       "Water Quality" = c(
+                         "Temperature (C)" = "temp_c",
+                         "Dissolved Oxygen" =
+                           "do_mg_l",
+                         "Conductivity (uS/cm)" = "sp_cond_us_cm"
+                       ),
                        "Habitat" = c(
                          "Total PHAB" = "tot_phab",
                          "Epifaunal Substrate" =
@@ -263,36 +257,40 @@ Explore data, maps, graphs and interactive features as they become available."),
                          "Percent Boulders - large & small" = "pct_boulder_ls",
                          "Percent Fast Water of Reach" =
                            "pct_fast_water",
-                         "IPI Score" = "ipi",
-                         "% Impervious Area - Watershed" =
-                           "pct_imperv_ws",
-                         "Road density - Watershed" = "road_dsty_ws"
-                       ),
-                       "Biomass" = c(
+                         "Percent Slow Water of Reach" =
+                           "pct_slow_water",
+                         "Human Disturbance Index (HDI)" = "crhdi_swamp"),
+                       "Landscape"=c(
+                         "% Impervious Area - 5K" =
+                           "pct_imperv_5k",
+                         "% Urban Area - 5K" =
+                           "pct_urban_5k",
+                         "Road density - 5K" = "road_dsty_5k"),
+                       "Algal Biomass" = c(
                          "Chlorophyll a (mg/m2)" = "chloro_a_mg_m2",
                          "AFDM (g/m2)" = "afdm_g_m2",
                          "% Macroalgae Cover" = "pct_macroalg_cvr"
                        ),
-                       "Nutrients" = c(
+                       "Water Chemistry" = c(
+                         "Chloride (mg/L)" = "chloride_mg_l",
                          "Total Nitrogen (mg/L)" = "tn_mg_l",
                          "Total Phosphorus(mg/L)" = "tp_mg_l",
                          "Unionized Ammonia (ug/L)" = "uia_ug_l"
-                       ),
-                       "Water Quality" = c(
-                         "Temperature (C)" = "temp_c",
-                         "Dissolved Oxygen" =
-                           "do_mg_l",
-                         "Conductivity (uS/cm)" = "sp_cond_us_cm"
-                       ),
-                       "Other" = c("Human Disturbance Index (HDI)" = "crhdi_swamp")
+                       )
                      )
                      ,
                      selected = 'tot_phab',
                      options = pickerOptions(actionsBox = F, liveSearch = T),
                      multiple = F), 
+           
+         tags$head(tags$style(".picker-select {z-index:99999!important;}")),
+         
+           
+           
+           
+
         
-        tags$head(tags$style(".selectpicker {z-index:99999 !important;}")),
-        
+
             br(),
            div(style = "font-weight:bold", textOutput("ws_list_2")),
            br(),           
@@ -307,13 +305,10 @@ Explore data, maps, graphs and interactive features as they become available."),
            br(),
            uiOutput("cond_boxplot"),
            plotOutput("boxplot2")
-         )
-       ),
+         ),
        tabPanel(id="detailed_table_tab",
          title = "Detailed Table",
-         
-         div(id = "detailed_table",
-           style = "overflow-y: scroll; height: 700px",
+     
            
            tags$i(h5("You can download this table, as well as all the other monitoring results for the selected watersheds and time period, using the 'Download Data' tool on the left of the page.")),
            br(),
@@ -324,24 +319,42 @@ Explore data, maps, graphs and interactive features as they become available."),
            div(uiOutput("cond_table"), style = "font-size:90%"),
            tags$head(tags$style("#cond_table td{
                                  position:relative;
-                                 };"))
-         )
-       ),
+                                 };")
+         
+       )),
        
        tabPanel(
-         title = "Site-specific",
+         title = "Score Comparisons",
          div(
-         id = "site_info",
-         tags$i(h5("Click on a site on the map to visualize site-specific information")),
-         textOutput("site_info"),
-         tableOutput("table_site_onClick"))
+         id = "score_comp",
+         tags$i(h5("Select a second indicator to compare to the first indicator")),
+         pickerInput(
+           inputId = "bio_score_2nd",
+           label = NULL,
+           choices = 
+             list("California Stream Condition Index (CSCI)"=c('Indicator: Benthic Macroinvertebrate'="csci"),
+                  "Algae Stream Condition Indices (ASCIs)"=c("Indicator: Soft Algae"="asci_soft_alg",
+                                                             "Indicator: Diatoms" = "asci_diatom",
+                                                             "Indicator: Diatoms-Soft Algae (Hybrid)" = "asci_hyb"
+                  ),
+                  "Riparian Habitat Condition" = c("CRAM Score" = "cram")
+             ),
+           selected = "asci_soft_alg",
+           multiple=F
+         ), 
+         br(),
+         plotOutput("bio_score_comp")
+         )
        )
        
        
        
   
         
-        )))),
+        ),
+      tags$head(tags$style(".nav-tabs-custom {z-index:99998!important;}"))
+      
+      ))),
     
 
     

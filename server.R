@@ -53,7 +53,7 @@ server <- (function(input, output, session) {
     description <- if (score == "csci") {"CSCI stands for California Stream Condition Index. This
       index was developed in ... by ... to .... Values of this index are computed based on ... and thus
       represent .... The values range from 0 to 1, 0 representing the worst score, and 1 the best score.
-      See the table to the left for a more detailed presentation of CSCI score breaks"}
+      See the table below for a more detailed presentation of CSCI score breaks"}
     
     paste0(description)
     })
@@ -138,7 +138,17 @@ server <- (function(input, output, session) {
       as.character(bio_vars_filter$name[which(bio_vars_filter$param == filter_by)])
     size_by <- input$size_by
     size_name <- as.character(param_names$fullname[which(param_names$dataname == size_by)])
-    
+    score_2nd <- input$bio_score_2nd
+    score_2nd_name <- as.character(bio_vars_filter$name[which(bio_vars_filter$param == score_2nd)])
+    column_names <- c("RMC ID",
+                      "Watershed",
+                      "Sub-watershed",
+                      "Creek",
+                      "Year",
+                      filter_name,
+                      size_name, 
+                      score_2nd_name
+    ) 
     data_sub <-
       df_bio %>% dplyr::filter(year >= input$wy[1] & year <= input$wy[2]) %>%
       dplyr::filter(if (input$spatial_filter == "sub_ws") {
@@ -149,17 +159,12 @@ server <- (function(input, output, session) {
       dplyr::mutate(year = factor(year, levels = seq(
         min(bio_vars_yr), max(bio_vars_yr), 1
       ))) %>%
-      dplyr::select(c("rmc_id", "ws", "subws","creek", "year", filter_by, size_by))  %>%
+      dplyr::select(if(!(score_2nd_name == filter_name)) 
+                           {c("rmc_id", "ws", "subws","creek", "year", filter_by, size_by, score_2nd)}
+                    else {c("rmc_id", "ws", "subws","creek", "year", filter_by, size_by)})  %>%
       arrange(desc(year), ws) %T>%
-      {
-        names(.) <-
-          c("RMC ID",
-            "Watershed",
-            "Sub-watershed",
-            "Creek",
-            "Year",
-            filter_name,
-            size_name )
+      { 
+        names(.) <- if(!(score_2nd_name == filter_name)){column_names} else {column_names[1:7]}
       }
     
     
@@ -168,7 +173,7 @@ server <- (function(input, output, session) {
     if (nrow(data_sub) > 0) {
       data_sub <- data_sub %>%
         dplyr::mutate(filter_by_chr = NA) %>% # Makes unknown column'' error appear
-        dplyr::select(c(1, 2, 3, 4, 5, 6, 8, 7)) %>%
+        dplyr::select(if(!(score_2nd_name == filter_name)){c(1, 2, 3, 4, 5, 6, 9, 7,8)} else c(1, 2, 3, 4, 5, 6, 8, 7)) %>%
         dplyr::rename_at(7, ~ paste(filter_name, " ", sep = ''))
       
       
@@ -210,7 +215,7 @@ server <- (function(input, output, session) {
   # Value boxes   
   output$vbox_vla <- renderValueBox({
     data <- data_sub()
-    pct_vla <- 100*signif(sum(data[,7]==colors_bio[4])/nrow(data),2)
+    pct_vla <- 100*signif(sum(data[,7]==colors_bio[4],na.rm=T)/nrow(data[!is.na(data[,7]),]),2)
     
     valueBox(
       subtitle=tags$p("of sites are Very Likely Altered", style="font-size:95%"),
@@ -221,7 +226,7 @@ server <- (function(input, output, session) {
   })
   output$vbox_la <- renderValueBox({
     data <- data_sub()
-    pct_la <- 100*signif(sum(data[,7]==colors_bio[3])/nrow(data),2)
+    pct_la <- 100*signif(sum(data[,7]==colors_bio[3],na.rm=T)/nrow(data[!is.na(data[,7]),]),2)
     
     valueBox(
       subtitle=tags$p("of sites are Likely Altered",style="font-size:95%"),
@@ -232,7 +237,7 @@ server <- (function(input, output, session) {
   })
   output$vbox_pi <- renderValueBox({
     data <- data_sub()
-    pct_pi <- 100*signif(sum(data[,7]==colors_bio[2])/nrow(data),2)
+    pct_pi <- 100*signif(sum(data[,7]==colors_bio[2],na.rm=T)/nrow(data[!is.na(data[,7]),]),2)
     
     valueBox(
       subtitle=tags$p("of sites are Possibly Intact",style="font-size:95%"),
@@ -244,7 +249,7 @@ server <- (function(input, output, session) {
   
   output$vbox_li <- renderValueBox({
     data <- data_sub()
-    pct_li<- 100*signif(sum(data[,7]==colors_bio[1])/nrow(data),2)
+    pct_li<- 100*signif(sum(data[,7]==colors_bio[1],na.rm=T)/nrow(data[!is.na(data[,7]),]),2)
     
     valueBox(
       subtitle=tags$p("of sites are Likely Intact",style="font-size:95%"),
@@ -402,7 +407,8 @@ server <- (function(input, output, session) {
   
   # Summary barplot 
   output$barplot <- renderPlot({
-    data_sub <- data_sub()
+    data_sub <- data_sub() 
+    data_sub <- data_sub[!is.na(data_sub[,7]),]
     data_sub[,7] <- factor(data_sub[,7], levels=colors_bio)
     
     n=2
@@ -455,7 +461,8 @@ server <- (function(input, output, session) {
   
   output$cond_scatter <- renderUI({
     if (nrow(data_sub()) <= 1 ||
-        sum(!is.na(data_sub()[, ncol(data_sub())])) <= 1) {
+        sum(!is.na(data_sub()[, (ncol(data_sub())-1)])) <= 1 ||
+        sum(!is.na(data_sub()[, (ncol(data_sub())-2)])) <= 1 ) {
       h5(
         "No data to show: Make sure you selected a stressor variable and there are at least two assessment events for the selected time period/watersheds"
       )
@@ -679,8 +686,9 @@ server <- (function(input, output, session) {
     }
     
     getColor <- function() {
-      if (!(filter_by == "none")) {
         ifelse(
+          is.na(data_sub$filter),"white",
+          ifelse(
           data_sub$filter < threshold1,
           colors_bio[4],
           ifelse(
@@ -693,9 +701,9 @@ server <- (function(input, output, session) {
             )
           )
         )
-      }
-      else
-        "white"
+      )
+     
+   
       
     }
     
@@ -737,15 +745,16 @@ server <- (function(input, output, session) {
         addLegendCustom(
           position = "topright",
           opacity = 1,
-          colors = colors_bio,
+          colors = c(colors_bio, "white"),
           labels = c(
             "Likely Intact",
             "Possibly Intact",
             "Likely Altered",
-            "Very Likely Altered"
+            "Very Likely Altered",
+            "No Data"
           ),
-          sizes = c(rep(12, 4)),
-          shapes = rep("circle", 4),
+          sizes = c(rep(12, 5)),
+          shapes = rep("circle", 5),
           title = as.character(filter_name)
         )
       
@@ -760,45 +769,20 @@ server <- (function(input, output, session) {
     
   })
   
-  
-  # Watershed-specific info that appears when the user clicks on a polygon
-  observe({
-    click <- input$map_sites_shape_click
-    if (is.null(click))
-      return()
-    else
-      output$ws_info <- renderText({
-        paste("Watershed-specific info for", click$id)
-      })
-    
-  })
-  
-  # Site-specific info that appears when the user clicks on a marker
-  observe({
-    click <- input$map_sites_marker_click
-    if (is.null(click))
-      return()
-    
-    
-    else
-      output$site_info <- renderText({
-        paste("Site-specific info for", click$id, "(", df_bio$ws[which(df_bio$rmc_id == click$id)], ")")
-      })
-    
-    output$table_site_onClick <- renderTable({
-      slct_col <-
-        colnames(df_bio[, c(1, 3, 29, 30, 7, 11, 12, 13, 14, 15, 16, 17, 18, 19, 23, 31, 32)])
-      d <- df_bio %>% dplyr::select(slct_col) %>%
-        filter(rmc_id == click$id) %T>%
-        {
-          names(.) <-
-            as.character(param_names[match(slct_col, param_names$dataname), 1])
-        } %>%
-        t()
-      
-      return(d)
-    }, rownames = T, colnames = F, bordered = T, align = 'c')
-  })
+
+
+
+  # Score Comparisons
+output$bio_score_comp <- renderPlot({
+  data_sub_plots <- as.data.frame(data_sub())
+  if ( ncol(data_sub_plots)== 9){
+  y_var <- data_sub_plots[, 9]
+  x_var <- data_sub_plots[, 6]
+  p <- ggplotRegression(y=y_var,x= x_var) +
+    xlab(colnames(data_sub_plots)[9]) + ylab(colnames(data_sub_plots)[6])}
+  else p <- NULL
+  return(p)
+})
   
   
   
@@ -1833,6 +1817,24 @@ server <- (function(input, output, session) {
     
     
   })
+  
+  tox_data_sub_plot <- reactive({ 
+    df_tox %>% 
+      filter(year==input$tox_yr, 
+             season == input$tox_season, 
+             sampleType=="First")})
+  
+  output$plot_tox <- renderPlot({
+    ggplot(data=tox_data_sub_plot(), aes(x=organism_u, y=PercentEffect)) + 
+      geom_bar(aes(fill=organism_u),stat="identity", position="dodge") + 
+      facet_grid(MatrixName~ StationCode) + 
+      theme(axis.text.x = element_text(angle=60, hjust=1), 
+            legend.position  = "none", 
+            axis.title.x = element_blank()) + 
+      ylab("Percent Effect")
+    
+  })
+  
   
   
   output$map_tox <- renderLeaflet({
