@@ -780,7 +780,11 @@ output$bio_score_comp <- renderPlot({
   x_var <- data_sub_plots[, 6]
   p <- ggplotRegression(y=y_var,x= x_var) +
     xlab(colnames(data_sub_plots)[9]) + ylab(colnames(data_sub_plots)[6])}
-  else p <- NULL
+  else { 
+  y_var <- data_sub_plots[, 6]
+  x_var <- data_sub_plots[, 6]
+  p <- ggplotRegression(y=y_var,x= x_var) +
+    xlab(colnames(data_sub_plots)[6]) + ylab(colnames(data_sub_plots)[6])}
   return(p)
 })
   
@@ -900,7 +904,7 @@ output$bio_score_comp <- renderPlot({
     
   })
   
-  
+
   
   # Download data 
   output$downloadData_poc <- downloadHandler(

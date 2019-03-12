@@ -133,7 +133,7 @@ Explore data, maps, graphs and interactive features as they become available."),
             multiple=F
           ), offset=4
         ),
-        tags$div(title="Click here for description",actionLink(inputId="score_popup", label="What is this?", icon=NULL))
+        tags$div(title="Click  here for description",actionLink(inputId="score_popup", label="What is this?", icon=NULL))
         
 
       ),
@@ -185,8 +185,14 @@ Explore data, maps, graphs and interactive features as they become available."),
                  
                  downloadButton("downloadData", label = "Data"),
                      # Input: Choose file type ----
-                radioButtons("file_type", NULL, inline = T,
-                                  choices = c(".csv", ".xlsx", ".shp"))
+                radioButtons("file_type", label=NULL, inline = T,
+                                  choices = c(".csv", ".xlsx", ".shp")), 
+                checkboxGroupInput("score_dwlnd", label=NULL,
+                                   inline=F, choices=c('CSCI'="csci",
+                                                          "ASCI: Soft Algae"="asci_soft_alg",
+                                                          "ASCI: Diatoms" = "asci_diatom",
+                                                          "ASCI: (Hybrid)" = "asci_hyb",
+                                                          "CRAM" = "cram"), selected=c("csci", "asci_soft_alg", "asci_diatom", "asci_hyb", "cram"))
                   
                      
                 )
