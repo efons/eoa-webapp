@@ -107,7 +107,7 @@ full_names <- c("RMC Station ID","Water Board ID", "Water Year", "Sample Date",
                 'Shannon Diversity (H) of Natural Substrate Types','% Substrate Smaller than Sand (<2 mm)', 'Percent Boulders - large & small', 'Percent Fast Water of Reach','Percent Slow Water of Reach',
                 "Human Disturbance Index") # Habitat 
 
-param_names <- data.frame(fullname=c("Watershed","Creek",full_names,"Percent Impervious - 5K", "Percent Urban - 5K", "Road Density - 5K"), dataname=c("ws", "creek", select_param, "pct_imperv_5k", "pct_urban_5k","road_dsty_5k")) # add all other parameters from site file
+param_names <- data.frame(fullname=c("Watershed","Sub-Watershed","Creek",full_names,"Elevation (m)","Drainage Area (km2)","Percent Impervious - 5K", "Percent Urban - 5K", "Road Density - 5K"), dataname=c("ws","subws","creek", select_param, "elevation_m","drain_area_km2","pct_imperv_5k", "pct_urban_5k","road_dsty_5k")) # add all other parameters from site file
 
 
 # subset bioassessment data

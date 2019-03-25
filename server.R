@@ -12,8 +12,7 @@ server <- (function(input, output, session) {
   ## Bioassessment data
   ###################################################################################################################
   
-  # Help bio tab 
-  
+  # Help bio tab : description of the tab in popup window
   observeEvent(input$bio_tab_title,{
     showModal(modalDialog(
       title = "Biological Condition Assessment",
@@ -46,6 +45,7 @@ server <- (function(input, output, session) {
     ))
   })
   
+  # description of the selected score in popup window
   score_desc_txt <- reactive({
     score <- input$filter_by 
     score_name <- bio_vars_filter[which(bio_vars_filter$param == score),"name"]
@@ -92,19 +92,10 @@ server <- (function(input, output, session) {
   })
 
     
-    
 
-  # Summary or detailed version? 
-    # option to show/hide the detailed info ? 
-    # using shinyjs or other
 
-    
-  
-  # map parameter : size filter by stressor variable
- 
-  
-  
-  # Spatial Filter: county vs. watersheds
+  # Watershed dropdown menu 
+  # Only if "Watershed-level" selected over "Whole county"
   output$scnd_sub_ws <- renderUI({
    
       pickerInput(
@@ -115,9 +106,6 @@ server <- (function(input, output, session) {
         options = list(`actions-box` = ifelse((input$spatial_filter == "sub_ws"),TRUE,FALSE), size = 20),
         multiple = T
       )
-    
- 
-      
   })
   
   
@@ -147,8 +135,8 @@ server <- (function(input, output, session) {
                       "Year",
                       filter_name,
                       size_name, 
-                      score_2nd_name
-    ) 
+                      score_2nd_name)
+    
     data_sub <-
       df_bio %>% dplyr::filter(year >= input$wy[1] & year <= input$wy[2]) %>%
       dplyr::filter(if (input$spatial_filter == "sub_ws") {
@@ -169,13 +157,11 @@ server <- (function(input, output, session) {
     
     
     # Color cells for likely altered site - add new column (values stored as characters)
-    
     if (nrow(data_sub) > 0) {
       data_sub <- data_sub %>%
         dplyr::mutate(filter_by_chr = NA) %>% # Makes unknown column'' error appear
         dplyr::select(if(!(score_2nd_name == filter_name)){c(1, 2, 3, 4, 5, 6, 9, 7,8)} else c(1, 2, 3, 4, 5, 6, 8, 7)) %>%
         dplyr::rename_at(7, ~ paste(filter_name, " ", sep = ''))
-      
       
       
       for (i in 1:nrow(data_sub)) {
@@ -224,6 +210,7 @@ server <- (function(input, output, session) {
       icon = icon("bolt")
     )
   })
+  
   output$vbox_la <- renderValueBox({
     data <- data_sub()
     pct_la <- 100*signif(sum(data[,7]==colors_bio[3],na.rm=T)/nrow(data[!is.na(data[,7]),]),2)
@@ -314,7 +301,7 @@ server <- (function(input, output, session) {
     if (nrow(data_sub()) == 0)
     {
       h5(
-        "No data to show (no samples for this watershed/time period OR no parameter selected in map parameters)"
+        "No data to show (no samples for this watershed/time period)"
       )
     }
     else {
@@ -362,30 +349,47 @@ server <- (function(input, output, session) {
     proj4string(SHP) <- CRS("+init=epsg:4326")
     
     return(SHP)
-    
-    
+
   })
   
+  # Create data table for download
+  bio_table_dwld <- reactive({
+    score_slct <- which(colnames(df_bio) %in% input$score_dwlnd)
+    col_slct <- c(1, 41:43,4, 37:38, score_slct,15:36, 39:40, 44:46)
+    col_names <- c("RMC ID", "Watershed","Sub-Watershed","Creek","Sampling Date", "Latitude", "Longitude",
+                   as.character(param_names[match(colnames(df_bio[,col_slct[8:length(col_slct)]]),param_names$dataname),"fullname"]))
+    
+    data_sub <-
+      df_bio %>% dplyr::filter(year >= input$wy[1] & year <= input$wy[2]) %>%
+      dplyr::filter(if (input$spatial_filter == "sub_ws") {
+        ws %in% input$ws
+      } else {
+        ws %in% bio_vars_ws
+      }) %>%
+      dplyr::mutate(year = factor(year, levels = seq(
+        min(bio_vars_yr), max(bio_vars_yr), 1
+      ))) %>%
+      dplyr::select(col_slct) %T>%
+      {names(.) <- col_names}
+    
+    return(data_sub)
+  })
   
-  # Downloadable user selected file type of selected dataset ----
+  # Download user selected file type of selected dataset ----
   output$downloadData <- downloadHandler(
     filename = function() { 
-      
       if (!input$file_type == ".shp"){
               paste(input$spatial_filter, "_table", Sys.Date(), input$file_type, sep = "")
       }
       else {paste0("shpExport.zip")} 
     },
- #   content = function(file) {
-#      write.xlsx(data_sub(), file)
- #   }
-    
+  
     content = function(file) {
       
        if(input$file_type== ".csv") {
-        write.csv(data_sub(), file, row.names = FALSE)
+        write.csv(bio_table_dwld(), file, row.names = FALSE)
       } else if(input$file_type == ".xlsx") {
-        write.xlsx(data_sub(), file)
+        write.xlsx(bio_table_dwld, file)
       }
       if (input$file_type == ".shp"){
         if (length(Sys.glob("shpExport.*"))>0){
@@ -398,13 +402,10 @@ server <- (function(input, output, session) {
           file.remove(Sys.glob("shpExport.*"))
         }
       }
-      
     }
-  
   )
   
-  
-  
+
   # Summary barplot 
   output$barplot <- renderPlot({
     data_sub <- data_sub() 
@@ -430,7 +431,6 @@ server <- (function(input, output, session) {
         scale_y_continuous(labels = percent_format())
     }
     
-    
     p <- p + 
       scale_fill_manual(values=c( "#A6DBA0"=colors_bio[1], "#FEEBA0"=colors_bio[2], "#FF6D46"=colors_bio[3], "#762A83"=colors_bio[4]),
                                 breaks=colors_bio,
@@ -446,8 +446,7 @@ server <- (function(input, output, session) {
   })
   
   
-  # Scatter Plots
-  
+  # Scatter Plots: indicator vs. stressor variable
   output$scatterplots <- renderText({
     ifelse(
       input$spatial_filter == "sub_ws",
@@ -457,7 +456,6 @@ server <- (function(input, output, session) {
               "")
     )
   })
-  
   
   output$cond_scatter <- renderUI({
     if (nrow(data_sub()) <= 1 ||
@@ -655,7 +653,6 @@ server <- (function(input, output, session) {
     }
     
     
-    
     # pop-up window for individual sites
     content <- paste(
       sep = "<br/>",
@@ -702,9 +699,6 @@ server <- (function(input, output, session) {
           )
         )
       )
-     
-   
-      
     }
     
     # update map
@@ -764,15 +758,11 @@ server <- (function(input, output, session) {
       # addPolylines(data=creeks, weight=1, color="black")
       #}
     }
-    
-    
-    
   })
   
 
 
-
-  # Score Comparisons
+  # Scatterplots: Score Comparisons
 output$bio_score_comp <- renderPlot({
   data_sub_plots <- as.data.frame(data_sub())
   if ( ncol(data_sub_plots)== 9){
