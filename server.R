@@ -19,9 +19,9 @@ server <- (function(input, output, session) {
       HTML('San Francisco Bay Area Stormwater Municipal Regional Permit (MRP), Provision C.8. on Water Quality Monitoring, 
       section C.8.d.(i) on Biological Assessments: "The Permittees shall conduct biological
            assessments (also referred to herein as bioassessments) in accordance with
-           SWAMP Standard Operating Procedures22,23,24 and shall include collection
+           SWAMP Standard Operating Procedures and shall include collection
            and reporting of in-stream biological and physical habitat data according to
-           the SWAMP Standard Operating Procedures for Bioassessment,3 including
+           the SWAMP Standard Operating Procedures for Bioassessment, including
            benthic algae, benthic macroinvertebrates, water chemistry, and full
            characterization of physical habitat."
       <br/>
@@ -50,10 +50,78 @@ server <- (function(input, output, session) {
     score <- input$filter_by 
     score_name <- bio_vars_filter[which(bio_vars_filter$param == score),"name"]
     
-    description <- if (score == "csci") {"CSCI stands for California Stream Condition Index. This
-      index was developed in ... by ... to .... Values of this index are computed based on ... and thus
-      represent .... The values range from 0 to 1, 0 representing the worst score, and 1 the best score.
-      See the table below for a more detailed presentation of CSCI score breaks"}
+    description <- if (score == "csci") {
+
+"The benthic (i.e., bottom-dwelling) macroinvertebrates collected through this monitoring
+program are organisms that live on, under, and around the rocks and sediment in the stream
+      bed. Examples include dragonfly and stonefly larvae, snails, worms, and beetles.
+      Each BMI species has a unique response to water chemistry and physical habitat condition.
+      Some are relatively sensitive to poor habitat and pollution; others are more tolerant. Therefore,
+      the abundance and variety of BMIs in a stream indicates the biological condition of the stream.
+<br/>
+<br/>
+
+         
+         The California Stream Condition Index (CSCI) is a biological index 
+that was developed by the State Water Resources Control Board (State Board) and is used to score the condition
+of benthic macroinvertabrate (BMI) communities in perennial wadeable rivers and streams. The CSCI translates BMI
+data into an overall measure of stream health. The CSCI was developed using a large reference data set that is 
+intended to represent the full range of natural conditions in California (Rehn et al. 2015). It combines two 
+types of indices: 1) taxonomic completeness, as measured by the ratio of observed-to-expected taxa (O/E); and
+2) ecological structure and function, measured as a predictive multi-metric index (pMMI) that is based on 
+reference conditions. The CSCI score is computed as the average of the sum of O/E and pMMI. 
+The values range from 0 to 1, 0 representing the worst score, and 1 the best score.In the current MRP, 
+the Regional Water Board defined a CSCI score of 0.795 as a threshold for identifying sites with degradeded
+biological condition that may be considered as candidates for a Stressor Source Identification project.
+      
+<br/>
+<br/>
+
+
+See the table below for a more detailed presentation of CSCI score breaks."}
+    else{
+        if (score %in% c("asci_hyb", "asci_diatom", "asci_soft_alg")) {
+          "Similar to benthic macroinvertebrates, the abundance and type of benthic algae species living
+on a streambed can indicate stream health. When evaluated with the CSCI, biological indices based on benthic
+          algae can provide a more complete picture of the streams biological condition because algae
+          respond more directly to nutrients and water chemistry. In contrast, BMIs are more responsive
+          to physical habitat.
+          <br/>
+          <br/>
+
+   
+          The State Water Board and SCCWRP recently developed the draft Algae Stream Condition
+          Index (ASCI) which uses benthic algae data as a measure of biological condition for streams in
+          California (Theroux et al. in prep.). The ASCI is a non-predictive scoring tool comprised of three 
+          single-assemblage metrics associated with either
+          diatoms or soft algae, or combinations of metrics representing both assemblages (i.e, "hybrid").Additional study is needed however, to determine the best approach to apply the ASCI tools to
+evaluate bioassessment data. For example, it is not clear if the ASCI should be used as a
+          second line of evidence to understand CSCI scoring results, or if it would be more effective as
+          an independent indicator to evaluate different types of stressors (e.g., nutrients) to which BMIs
+          are not very responsive. The ASCI is currently under review by the Biostimulatory-Biointegrity
+          Policy Science Advisory Panel and the State Water Board. 
+          
+          <br/>
+          <br/>
+
+        
+         See the table below for a more detailed presentation of ASCI score breaks."
+        }
+      else {
+
+        if (score == "cram") {"The California Rapid Assessment Method (CRAM) evaluates four different components of riparian condition on a scale from 25 to 100. 
+        The four attributes include: 1) buffer and landscape context; 2) hydrology; 3) physical structure; and 4) biotic structure.
+        These four attributes are summed together and divided by four to calculate an overall total CRAM score for each bioassessment 
+        site. The use of this score was discontinued in 2016. 
+        
+        <br/>
+        <br/>
+        
+        
+        See the table below for a more detailed presentation of CRAM score breaks."}}
+      
+  
+      }
     
     paste0(description)
     })
@@ -76,7 +144,7 @@ server <- (function(input, output, session) {
     
     
     df <- df %>% datatable(options = list(autoWidth=F,columnDefs = list(list(targets=2, visible=F)), dom='t', bSort=F)) %>% 
-      formatStyle(1,2,backgroundColor=styleEqual(col,colors_bio[col]), color=styleEqual(col,c(rep("black",3),"white"))) %>%
+      formatStyle(1,2,backgroundColor=styleEqual(col,colors_bio[col]), color=styleEqual(col,c("white",rep("black",3)))) %>%
       formatStyle( 0, target= 'row',lineHeight='70%')
     
     return(df)
@@ -85,7 +153,7 @@ server <- (function(input, output, session) {
   observeEvent(input$score_popup,{
     showModal(modalDialog(
       title = "Score Description",
-      score_desc_txt(),
+      HTML(score_desc_txt()),
       DT::renderDataTable( score_desc_table()),
       easyClose = TRUE, footer=modalButton("Got it!")
       ))
@@ -94,19 +162,6 @@ server <- (function(input, output, session) {
     
 
 
-  # Watershed dropdown menu 
-  # Only if "Watershed-level" selected over "Whole county"
-  output$scnd_sub_ws <- renderUI({
-   
-      pickerInput(
-        inputId = "ws",
-        label = "Choose Watershed",
-        choices = if (input$spatial_filter == "sub_ws") {as.character(bio_vars_ws)} else {NULL},
-        selected = if (input$spatial_filter == "sub_ws") {as.character(bio_vars_ws)} else {NULL},
-        options = list(`actions-box` = ifelse((input$spatial_filter == "sub_ws"),TRUE,FALSE), size = 20),
-        multiple = T
-      )
-  })
   
   
   
@@ -139,11 +194,7 @@ server <- (function(input, output, session) {
     
     data_sub <-
       df_bio %>% dplyr::filter(year >= input$wy[1] & year <= input$wy[2]) %>%
-      dplyr::filter(if (input$spatial_filter == "sub_ws") {
-        ws %in% input$ws
-      } else {
-        ws %in% bio_vars_ws
-      }) %>%
+      dplyr::filter(ws %in% input$ws) %>%
       dplyr::mutate(year = factor(year, levels = seq(
         min(bio_vars_yr), max(bio_vars_yr), 1
       ))) %>%
@@ -198,58 +249,12 @@ server <- (function(input, output, session) {
   })
   
   
-  # Value boxes   
-  output$vbox_vla <- renderValueBox({
-    data <- data_sub()
-    pct_vla <- 100*signif(sum(data[,7]==colors_bio[4],na.rm=T)/nrow(data[!is.na(data[,7]),]),2)
-    
-    valueBox(
-      subtitle=tags$p("of sites are Very Likely Altered", style="font-size:95%"),
-      color="purple",
-      value= paste(pct_vla, "%"),
-      icon = icon("bolt")
-    )
-  })
   
-  output$vbox_la <- renderValueBox({
-    data <- data_sub()
-    pct_la <- 100*signif(sum(data[,7]==colors_bio[3],na.rm=T)/nrow(data[!is.na(data[,7]),]),2)
-    
-    valueBox(
-      subtitle=tags$p("of sites are Likely Altered",style="font-size:95%"),
-      color="red",
-      value= paste(pct_la, "%"),
-      icon = icon("bolt")
-    )
-  })
-  output$vbox_pi <- renderValueBox({
-    data <- data_sub()
-    pct_pi <- 100*signif(sum(data[,7]==colors_bio[2],na.rm=T)/nrow(data[!is.na(data[,7]),]),2)
-    
-    valueBox(
-      subtitle=tags$p("of sites are Possibly Intact",style="font-size:95%"),
-      color="yellow",
-      value= paste(pct_pi, "%"),
-      icon = icon("tint")
-    )
-  })
-  
-  output$vbox_li <- renderValueBox({
-    data <- data_sub()
-    pct_li<- 100*signif(sum(data[,7]==colors_bio[1],na.rm=T)/nrow(data[!is.na(data[,7]),]),2)
-    
-    valueBox(
-      subtitle=tags$p("of sites are Likely Intact",style="font-size:95%"),
-      color="green",
-      value= paste(pct_li, "%"),
-      icon = icon("tint")
-    )
-  })
   
   # List of selected watersheds
   ws_list <- reactive({
     ifelse(
-      input$spatial_filter == "sub_ws",
+      length(input$ws) < length(unique(bio_vars_ws)),
       paste(
         "Selected watersheds: ",
         paste(input$ws, collapse = ", "),
@@ -361,11 +366,8 @@ server <- (function(input, output, session) {
     
     data_sub <-
       df_bio %>% dplyr::filter(year >= input$wy[1] & year <= input$wy[2]) %>%
-      dplyr::filter(if (input$spatial_filter == "sub_ws") {
-        ws %in% input$ws
-      } else {
-        ws %in% bio_vars_ws
-      }) %>%
+      dplyr::filter(ws %in% input$ws
+      ) %>%
       dplyr::mutate(year = factor(year, levels = seq(
         min(bio_vars_yr), max(bio_vars_yr), 1
       ))) %>%
@@ -379,7 +381,7 @@ server <- (function(input, output, session) {
   output$downloadData <- downloadHandler(
     filename = function() { 
       if (!input$file_type == ".shp"){
-              paste(input$spatial_filter, "_table", Sys.Date(), input$file_type, sep = "")
+              paste("SC_bioassmnt", "_table", Sys.Date(), input$file_type, sep = "")
       }
       else {paste0("shpExport.zip")} 
     },
@@ -404,6 +406,11 @@ server <- (function(input, output, session) {
       }
     }
   )
+  
+  
+  output$bio_dwld_info <- renderText({
+    paste0("Download data for the ", input$wy[1],"-", input$wy[2], " period, for ", length(input$ws), " watersheds", " and for the following scores: ", paste0(bio_vars_filter[bio_vars_filter$param %in% input$score_dwlnd,"name"], collapse=", "))
+  })
   
 
   # Summary barplot 
@@ -448,13 +455,11 @@ server <- (function(input, output, session) {
   
   # Scatter Plots: indicator vs. stressor variable
   output$scatterplots <- renderText({
-    ifelse(
-      input$spatial_filter == "sub_ws",
-      paste("Scatterplots for ", input$wy[1], " - ", input$wy[2], sep =
-              ""),
+    
+      
       paste("Scatterplots for ", input$wy[1], " - ", input$wy[2], sep =
               "")
-    )
+    
   })
   
   output$cond_scatter <- renderUI({
@@ -477,7 +482,7 @@ server <- (function(input, output, session) {
     p <- ggplotRegression(y=y_var,x= x_var) +
       xlab(colnames(data_sub_plots)[8]) + ylab(colnames(data_sub_plots)[6])
     return(p)
-  }, height = 300, width = 400)
+  })
   
   
   # Scatterplots help window 
@@ -498,13 +503,8 @@ server <- (function(input, output, session) {
   
   # Boxplots 
   output$boxplots <- renderText({
-    ifelse(
-      input$spatial_filter == "sub_ws",
       paste("Boxplots for ", input$wy[1], " - ", input$wy[2], sep =
-              ""),
-      paste(" Boxplots for ", input$wy[1], " - ", input$wy[2], sep =
               "")
-    )
   })
   
   output$cond_boxplot <- renderUI({
@@ -562,7 +562,7 @@ server <- (function(input, output, session) {
       var_nb = 6,
       threshold = threshold
     ))
-  }, height = 300, width = 400)
+  })
   
   
   
@@ -570,7 +570,7 @@ server <- (function(input, output, session) {
     data_sub_plots <- as.data.frame(data_sub())
       return(bio_boxplot(data_sub_plots = data_sub_plots, var_nb = 8))
     
-  }, height = 300, width = 400)
+  })
   
   
   
@@ -630,11 +630,7 @@ server <- (function(input, output, session) {
     # subset data based on user input
     data_sub <-
       df_bio %>% filter(year >= input$wy[1] & year <= input$wy[2]) %>%
-      filter(if (input$spatial_filter == "sub_ws") {
-        ws %in% input$ws
-      } else {
-        ws %in% bio_vars_ws
-      })
+      filter(ws %in% input$ws)
     data_sub <-
       cbind(data_sub, data_sub[, which(colnames(data_sub) == filter_by)])
     colnames(data_sub)[ncol(data_sub)] <- "filter"
@@ -645,13 +641,9 @@ server <- (function(input, output, session) {
     }
     
     # subset watersheds shapefile based on user input
-    if (input$spatial_filter == "sub_ws") {
       sheds_sub <- sheds[sheds$SYSTEM %in% input$ws, ]
-    }
-    else {
-      sheds_sub <- sheds
-    }
     
+ 
     
     # pop-up window for individual sites
     content <- paste(
@@ -667,20 +659,6 @@ server <- (function(input, output, session) {
     )
     
     # Customize color and size of circle markers
-    getRadius <- function() {
-      if (input$show_radius == T) {
-        if ((!size_by == "none") & (!sum(!is.na(data_sub$size)) == 0)) {
-          rad <- 3 + 7 * (data_sub$size / max(data_sub$size, na.rm = T))
-        } else {
-          rad <- 4
-        }
-      }      else {
-        rad <- 4
-      }
-      
-      
-      return(ifelse(is.na(rad), 3, rad))
-    }
     
     getColor <- function() {
         ifelse(
@@ -727,7 +705,7 @@ server <- (function(input, output, session) {
           layerId = data_sub$rmc_id,
           lng = data_sub$long,
           lat = data_sub$lat,
-          radius = getRadius(),
+          radius = 4,
           weight = 1,
           opacity = 0.9,
           popup = content,

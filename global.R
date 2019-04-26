@@ -34,6 +34,7 @@ library(scales)
 library(beanplot)
 library(DT)
 library(RColorBrewer)
+library(htmltools)
 
 
 

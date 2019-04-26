@@ -82,7 +82,7 @@ tabItems(
     h5("Data is made available thanks to biological, physical and chemical monitoring efforts across Santa Clara Valley over several years.
 Explore data, maps, graphs and interactive features as they become available."),
     HTML("Browse the sidebar menu items on the left to explore the data! Each tab corresponds to a provision of the Municipal Regional Permit (MRP)
-       that regulates the different aspects of stormwater pollution for most municipalities of the San Francisco Bay Area. More specifically, the data collected by SCVURPP and presented in this application 
+       that regulates the different aspects of stormwater pollution for most municipalities of the San Francisco Bay Area. More specifically, the data collected by SCVURPPP and presented in this application 
        corresponds to the monitoring requirements under the following provisions of the MRP:
       <br/>
       <br/>
@@ -120,7 +120,7 @@ Explore data, maps, graphs and interactive features as they become available."),
      box(width=12,
         div(style = "font-weight:bold; color:orange; text-align:center",
             fluidRow(
-              h4(" Explore Creek Health Scores in the Santa Clara Basin")
+              h4(" Explore Biological Creek Health Scores in the Santa Clara Basin")
             )),
   
         column(4,
@@ -143,7 +143,7 @@ Explore data, maps, graphs and interactive features as they become available."),
       # Filter inputs
       fluidRow(
         column(3,
-             box(width=12, height = 600,
+             box(width=12, height = 650,
                  
                  
                        h4("Data Filters:")
@@ -160,17 +160,16 @@ Explore data, maps, graphs and interactive features as they become available."),
                    ),
                  
                   
-                     selectInput(
-                       inputId = "spatial_filter",
-                       label = "Spatial Scale:",
-                       choices = c(
-                         "All of Santa Clara Basin" = "whole_county",
-                         "Watershed-level" = "sub_ws"
-                       ),
-                       selected = "whole_county"
-                   ),
+                    
                   
-                   uiOutput("scnd_sub_ws"),
+                 pickerInput(
+                   inputId = "ws",
+                   label = "Choose Watershed",
+                   choices = as.character(bio_vars_ws),
+                   selected = as.character(bio_vars_ws),
+                   options = list(`actions-box` = TRUE, size = 20),
+                   multiple = T
+                 ),
 
               
                 
@@ -178,13 +177,8 @@ Explore data, maps, graphs and interactive features as they become available."),
                  
                  
                        h4("Data Download:"),
-                     
- 
-                     
-                     # Download Table button
-                 
-                 downloadButton("downloadData", label = "Data"),
-                     # Input: Choose file type ----
+            
+                 textOutput("bio_dwld_info"),
                 radioButtons("file_type", label=NULL, inline = T,
                                   choices = c(".csv", ".xlsx", ".shp")), 
                 checkboxGroupInput("score_dwlnd", label=NULL,
@@ -192,8 +186,10 @@ Explore data, maps, graphs and interactive features as they become available."),
                                                           "ASCI: Soft Algae"="asci_soft_alg",
                                                           "ASCI: Diatoms" = "asci_diatom",
                                                           "ASCI: (Hybrid)" = "asci_hyb",
-                                                          "CRAM" = "cram"), selected=c("csci", "asci_soft_alg", "asci_diatom", "asci_hyb", "cram"))
-                  
+                                                          "CRAM" = "cram"), selected=c("csci", "asci_soft_alg", "asci_diatom", "asci_hyb", "cram")),
+                
+                 downloadButton("downloadData", label = "Data Download")
+  
                      
                 )
              ),
@@ -207,11 +203,6 @@ Explore data, maps, graphs and interactive features as they become available."),
       # MAP
       
       column(9,
-             
-             fluidRow(valueBoxOutput("vbox_vla", width=3),
-                      valueBoxOutput("vbox_la", width=3),
-                      valueBoxOutput("vbox_pi", width=3),
-                      valueBoxOutput("vbox_li",width=3)),
       
       
       
@@ -220,18 +211,12 @@ Explore data, maps, graphs and interactive features as they become available."),
        
       
        tabPanel(title="Score Map", id="map",
-        fluidRow(column(12, leafletOutput("map_sites"))),
-        fluidRow(column(
-          3, actionButton("reset_button", "Reset view")
-       ), column(9,
-                 prettyCheckbox(
-                   inputId = "show_radius",
-                   label = "Stressors as marker size?",
-                   value = F,
-                   shape = "round",
-                   animation = "pulse",
-                   fill = F
-                 )))), 
+       fluidRow(column(12, leafletOutput("map_sites"))),
+       br(),
+       fluidRow(column(
+         3,actionButton("reset_button", "Reset view")
+       ))
+        ), 
        tabPanel(title='Score Plot', id="summary_plot",
                 plotOutput("barplot"),      
                 prettyCheckbox(inputId="show_bar_pct", label= "Show as %?")
