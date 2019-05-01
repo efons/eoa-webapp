@@ -9,8 +9,14 @@
 
 # Server function
 server <- (function(input, output, session) {
-  ## Bioassessment data
-  ###################################################################################################################
+
+  
+  
+# Bioassessment #################################################################################################################################        
+#################################################################################################################################################
+  
+  
+# Explanatory pop-up windows: bioassessments, scores ##########################
   
   # Help bio tab : description of the tab in popup window
   observeEvent(input$bio_tab_title,{
@@ -50,39 +56,40 @@ server <- (function(input, output, session) {
     score <- input$filter_by 
     score_name <- bio_vars_filter[which(bio_vars_filter$param == score),"name"]
     
-    description <- if (score == "csci") {
+  if (score == "csci") {
 
-"The benthic (i.e., bottom-dwelling) macroinvertebrates collected through this monitoring
-program are organisms that live on, under, and around the rocks and sediment in the stream
+    description <-  "The benthic (i.e., bottom-dwelling) macroinvertebrates collected through this monitoring
+      program are organisms that live on, under, and around the rocks and sediment in the stream
       bed. Examples include dragonfly and stonefly larvae, snails, worms, and beetles.
       Each BMI species has a unique response to water chemistry and physical habitat condition.
       Some are relatively sensitive to poor habitat and pollution; others are more tolerant. Therefore,
       the abundance and variety of BMIs in a stream indicates the biological condition of the stream.
-<br/>
-<br/>
+      <br/>
+      <br/>
 
          
          The California Stream Condition Index (CSCI) is a biological index 
-that was developed by the State Water Resources Control Board (State Board) and is used to score the condition
-of benthic macroinvertabrate (BMI) communities in perennial wadeable rivers and streams. The CSCI translates BMI
-data into an overall measure of stream health. The CSCI was developed using a large reference data set that is 
-intended to represent the full range of natural conditions in California (Rehn et al. 2015). It combines two 
-types of indices: 1) taxonomic completeness, as measured by the ratio of observed-to-expected taxa (O/E); and
-2) ecological structure and function, measured as a predictive multi-metric index (pMMI) that is based on 
-reference conditions. The CSCI score is computed as the average of the sum of O/E and pMMI. 
-The values range from 0 to 1, 0 representing the worst score, and 1 the best score.In the current MRP, 
-the Regional Water Board defined a CSCI score of 0.795 as a threshold for identifying sites with degradeded
-biological condition that may be considered as candidates for a Stressor Source Identification project.
+          that was developed by the State Water Resources Control Board (State Board) and is used to score the condition
+          of benthic macroinvertabrate (BMI) communities in perennial wadeable rivers and streams. The CSCI translates BMI
+          data into an overall measure of stream health. The CSCI was developed using a large reference data set that is 
+          intended to represent the full range of natural conditions in California (Rehn et al. 2015). It combines two 
+          types of indices: 1) taxonomic completeness, as measured by the ratio of observed-to-expected taxa (O/E); and
+          2) ecological structure and function, measured as a predictive multi-metric index (pMMI) that is based on 
+          reference conditions. The CSCI score is computed as the average of the sum of O/E and pMMI. 
+          The values range from 0 to 1, 0 representing the worst score, and 1 the best score.In the current MRP, 
+          the Regional Water Board defined a CSCI score of 0.795 as a threshold for identifying sites with degradeded
+          biological condition that may be considered as candidates for a Stressor Source Identification project.
       
-<br/>
-<br/>
+          <br/>
+          <br/>
 
 
-See the table below for a more detailed presentation of CSCI score breaks."}
-    else{
+          See the table below for a more detailed presentation of CSCI score breaks."}
+    
         if (score %in% c("asci_hyb", "asci_diatom", "asci_soft_alg")) {
-          "Similar to benthic macroinvertebrates, the abundance and type of benthic algae species living
-on a streambed can indicate stream health. When evaluated with the CSCI, biological indices based on benthic
+
+          description <-  "Similar to benthic macroinvertebrates, the abundance and type of benthic algae species living
+          on a streambed can indicate stream health. When evaluated with the CSCI, biological indices based on benthic
           algae can provide a more complete picture of the streams biological condition because algae
           respond more directly to nutrients and water chemistry. In contrast, BMIs are more responsive
           to physical habitat.
@@ -94,8 +101,9 @@ on a streambed can indicate stream health. When evaluated with the CSCI, biologi
           Index (ASCI) which uses benthic algae data as a measure of biological condition for streams in
           California (Theroux et al. in prep.). The ASCI is a non-predictive scoring tool comprised of three 
           single-assemblage metrics associated with either
-          diatoms or soft algae, or combinations of metrics representing both assemblages (i.e, "hybrid").Additional study is needed however, to determine the best approach to apply the ASCI tools to
-evaluate bioassessment data. For example, it is not clear if the ASCI should be used as a
+          diatoms or soft algae, or combinations of metrics representing both assemblages (i.e, <q>hybrid</q>). Additional study
+          is needed however, to determine the best approach to apply the ASCI tools to
+          evaluate bioassessment data. For example, it is not clear if the ASCI should be used as a
           second line of evidence to understand CSCI scoring results, or if it would be more effective as
           an independent indicator to evaluate different types of stressors (e.g., nutrients) to which BMIs
           are not very responsive. The ASCI is currently under review by the Biostimulatory-Biointegrity
@@ -107,9 +115,10 @@ evaluate bioassessment data. For example, it is not clear if the ASCI should be 
         
          See the table below for a more detailed presentation of ASCI score breaks."
         }
-      else {
+    
+        if (score == "cram") {
 
-        if (score == "cram") {"The California Rapid Assessment Method (CRAM) evaluates four different components of riparian condition on a scale from 25 to 100. 
+          description <- "The California Rapid Assessment Method (CRAM) evaluates four different components of riparian condition on a scale from 25 to 100. 
         The four attributes include: 1) buffer and landscape context; 2) hydrology; 3) physical structure; and 4) biotic structure.
         These four attributes are summed together and divided by four to calculate an overall total CRAM score for each bioassessment 
         site. The use of this score was discontinued in 2016. 
@@ -118,14 +127,11 @@ evaluate bioassessment data. For example, it is not clear if the ASCI should be 
         <br/>
         
         
-        See the table below for a more detailed presentation of CRAM score breaks."}}
-      
-  
-      }
-    
+        See the table below for a more detailed presentation of CRAM score breaks."}
+
     paste0(description)
     })
-  
+   
   score_desc_table <- reactive({
     df <- bio_vars_filter %>% dplyr::filter(param == input$filter_by) %>% 
       dplyr::select(seq(3,6)) %T>% 
@@ -158,14 +164,11 @@ evaluate bioassessment data. For example, it is not clear if the ASCI should be 
       easyClose = TRUE, footer=modalButton("Got it!")
       ))
   })
+  
+  
 
-    
-
-
   
-  
-  
-  
+# Data subsetting ###########################################################
   # Reactive function that returns the subsetted data table
   data_sub <- reactive({
     req(!is.null(input$size_by))
@@ -207,139 +210,17 @@ evaluate bioassessment data. For example, it is not clear if the ASCI should be 
       }
     
     
-    # Color cells for likely altered site - add new column (values stored as characters)
-    if (nrow(data_sub) > 0) {
-      data_sub <- data_sub %>%
-        dplyr::mutate(filter_by_chr = NA) %>% # Makes unknown column'' error appear
-        dplyr::select(if(!(score_2nd_name == filter_name)){c(1, 2, 3, 4, 5, 6, 9, 7,8)} else c(1, 2, 3, 4, 5, 6, 8, 7)) %>%
-        dplyr::rename_at(7, ~ paste(filter_name, " ", sep = ''))
-      
-      
-      for (i in 1:nrow(data_sub)) {
-        if (!is.na(data_sub[i, 6])) {
-          if (data_sub[i, 6] <= threshold1)  {
-            data_sub[i, 7] <- colors_bio[4]
-          }
-          else {
-            if (data_sub[i, 6] < threshold2) {
-              data_sub[i, 7] <-colors_bio[3]
-            }
-            else {
-              if (data_sub[i, 6] < threshold3) {
-                data_sub[i, 7] <-colors_bio[2]
-              }
-              else {
-                if (threshold3 >= 0) {
-                  data_sub[i, 7] <-colors_bio[1]
-                }
-                else  {
-                  data_sub[i, 7] <- "black"
-                }
-                
-              }
-            }
-          }
-        }
-      }
-    }
-    
     return(as.data.frame(data_sub))
-    
-    
   })
   
+
+
   
-  
-  
-  # List of selected watersheds
-  ws_list <- reactive({
-    ifelse(
-      length(input$ws) < length(unique(bio_vars_ws)),
-      paste(
-        "Selected watersheds: ",
-        paste(input$ws, collapse = ", "),
-        sep = ""
-      ),
-      "All watersheds"
-    )
-  })
-  
-  output$ws_list_1 <- renderText({
-    ws_list()
-  })
-  output$ws_list_2 <- renderText({
-    ws_list()
-  })
-  
-  
-  
-  # Data Table
-  # Data Table title
-  output$score_tables <- renderText({
-    ifelse(
-      !input$size_by == "none",
-      paste(
-        bio_vars_filter$name[which(bio_vars_filter$param == input$filter_by)],
-        " and ",
-        param_names[which(param_names$dataname == input$size_by), "fullname"],
-        " for ",
-        input$wy[1],
-        " - ",
-        input$wy[2],
-        sep = ""
-      ),
-      paste(
-        bio_vars_filter$name[which(bio_vars_filter$param == input$filter_by)],
-        " for ",
-        input$wy[1],
-        " - ",
-        input$wy[2],
-        sep = ""
-      )
-    )
-    
-  })
-  
-  
-  # Error message when data set is empty
-  output$cond_table <- renderUI({
-    if (nrow(data_sub()) == 0)
-    {
-      h5(
-        "No data to show (no samples for this watershed/time period)"
-      )
-    }
-    else {
-      tableOutput("score_table")
-    }
-  })
-  
-  
-  # Create Table when data set not empty
-  output$score_table <- renderTable({
-    t <- data_sub()
-    
-    t[,7] <- sapply(rep(1:nrow(t),1), function(x) paste(
-      '<div style="width: 100%; height: 100%; z-index: 0; color:',
-      t[x,7],
-      '; position:absolute; top: 0; left: 0; padding:5px;"><span>',
-      signif(t[x, 6], 2),
-      '</span></div>'
-    ))
-    
-    return(t[, c(1, 2, 3, 4,5, 7,8)])
-    
-    
-  }, bordered = T, align = 'c', hover = T, sanitize.text.function = function(x)
-    x)
-  # error: unknown column ""
-  
-  
-  
+# Data download tool #######################################################  
   # create shapefile for download 
   bio_shp <- reactive({
     data <- data_sub() %>% 
-      dplyr::select(1:6,8) %T>% 
+      dplyr::select(1:7) %T>% 
     {names(.) <- c("rmc_id", "ws", "subws", "creek", "year", input$filter_by, input$size_by)} %>% 
       dplyr::arrange(rmc_id)
   
@@ -377,7 +258,7 @@ evaluate bioassessment data. For example, it is not clear if the ASCI should be 
     return(data_sub)
   })
   
-  # Download user selected file type of selected dataset ----
+  # Download user selected file type of selected dataset 
   output$downloadData <- downloadHandler(
     filename = function() { 
       if (!input$file_type == ".shp"){
@@ -409,172 +290,13 @@ evaluate bioassessment data. For example, it is not clear if the ASCI should be 
   
   
   output$bio_dwld_info <- renderText({
-    paste0("Download data for the ", input$wy[1],"-", input$wy[2], " period, for ", length(input$ws), " watersheds", " and for the following scores: ", paste0(bio_vars_filter[bio_vars_filter$param %in% input$score_dwlnd,"name"], collapse=", "))
+    paste0("Download data for the ", input$wy[1],"-", input$wy[2], " period, for ", length(input$ws), " watershed(s)", " and for the following scores: ", paste0(bio_vars_filter[bio_vars_filter$param %in% input$score_dwlnd,"name"], collapse=", "))
   })
   
 
-  # Summary barplot 
-  output$barplot <- renderPlot({
-    data_sub <- data_sub() 
-    data_sub <- data_sub[!is.na(data_sub[,7]),]
-    data_sub[,7] <- factor(data_sub[,7], levels=colors_bio)
-    
-    n=2
-    if (length(unique(data_sub[,2]))==1){n <- 3}
-    n_name <- ifelse(n==2,'Watershed',"Subwatershed")
-    
-    if (!input$show_bar_pct){
-          p <- ggplot(data = data_sub, aes(x = data_sub[,n], fill = data_sub[,7])) + geom_bar()+ ylab("Number of samples")
-          }
-    else {
-      data_sub <- data_sub %>% 
-        dplyr::rename("x_axis"=!!names(.[n]),
-              "score" = !!names(.[6]),
-               "score_cat" = !!names(.[7])) %>% 
-        dplyr::group_by(x_axis, score_cat, score) %>% 
-        dplyr::summarise(n = n()) 
-
-      p <- ggplot(data = data_sub, aes(x = x_axis, y=n, fill = score_cat)) + geom_bar(position="fill",stat='identity') + ylab("Percentage of samples") +
-        scale_y_continuous(labels = percent_format())
-    }
-    
-    p <- p + 
-      scale_fill_manual(values=c( "#A6DBA0"=colors_bio[1], "#FEEBA0"=colors_bio[2], "#FF6D46"=colors_bio[3], "#762A83"=colors_bio[4]),
-                                breaks=colors_bio,
-                                labels=c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered")) +
-      xlab(n_name) + 
-      theme(axis.text.x = element_text(angle = 45, hjust = 1), 
-            legend.position = "top", legend.box="vertical", legend.title = element_blank()) 
-    
-    
-    return(p)
-
+# Score overview: Map + barplot ###########################################
   
-  })
-  
-  
-  # Scatter Plots: indicator vs. stressor variable
-  output$scatterplots <- renderText({
-    
-      
-      paste("Scatterplots for ", input$wy[1], " - ", input$wy[2], sep =
-              "")
-    
-  })
-  
-  output$cond_scatter <- renderUI({
-    if (nrow(data_sub()) <= 1 ||
-        sum(!is.na(data_sub()[, (ncol(data_sub())-1)])) <= 1 ||
-        sum(!is.na(data_sub()[, (ncol(data_sub())-2)])) <= 1 ) {
-      h5(
-        "No data to show: Make sure you selected a stressor variable and there are at least two assessment events for the selected time period/watersheds"
-      )
-    }
-    else {
-      plotOutput("scatter1")
-    }
-  })
-  
-  output$scatter1 <- renderPlot({
-    data_sub_plots <- as.data.frame(data_sub())
-    x_var <- data_sub_plots[, 8]
-    y_var <- data_sub_plots[, 6]
-    p <- ggplotRegression(y=y_var,x= x_var) +
-      xlab(colnames(data_sub_plots)[8]) + ylab(colnames(data_sub_plots)[6])
-    return(p)
-  })
-  
-  
-  # Scatterplots help window 
-  observeEvent(input$interpret_scatter,{
-    showModal(modalDialog(
-      title = "Scatterplot coefficients",
-      "Pearson's correlation test assesses the strength of the linear relationship
-              between two variables (assumed to be normally distributed). 
-              Both R-squared and p-value can take values between 0 and 1. The closer R-squared is to 1, the stronger the relationship. 
-              The relationship is generally considered to be significant if p-value is below the significance level (e.g. 0.05). 
-              Spearman's correlation test assesses the strength of the monotonic relationship (i.e. either decreasing or increasing, 
-              but not necessarily linear) between the two variables, regardless of their distribution (non-parametric test). 
-              Spearman's Rho can take values between +1 and -1. Values of +1 or -1 indicate a strong monotonic relationship, whether the variables are
-              negatively (-) or positively (+) correlated. p-values below 0.05 are generally considered significant.",
-      easyClose = TRUE, footer=modalButton("Got it!")
-    ))
-  })
-  
-  # Boxplots 
-  output$boxplots <- renderText({
-      paste("Boxplots for ", input$wy[1], " - ", input$wy[2], sep =
-              "")
-  })
-  
-  output$cond_boxplot <- renderUI({
-    if (nrow(data_sub()) == 0)
-    {
-      h5(
-        "No data to show (no samples for this watershed/time period OR no parameter selected in map parameters)"
-      )
-    }
-    else {
-      plotOutput("boxplot")
-    }
-  })
-  
-  bio_boxplot <- function(data_sub_plots,
-                          var_nb = 8,
-                          threshold = -1) {
-    if (nrow(data_sub_plots) > 0) {
-      x_var <- data_sub_plots[,2]
-      x_var_name <- "Watersheds"
-      if (length(unique(x_var))==1) {x_var <- data_sub_plots[,3]
-      x_var_name="Subwatersheds"}
-      
-      y_var <- data_sub_plots[, var_nb]
-      df_tempo <- data.frame(x_var = x_var, y_var = y_var)
-      p <-
-        ggplot(df_tempo, aes(x = x_var, y = y_var)) + geom_boxplot(col = rgb(0, 0, 1, 0.6)) +
-        xlab(x_var_name) + ylab(colnames(data_sub_plots[var_nb])) +
-        stat_summary(
-          fun.data = give_tot,
-          geom = "text",
-          fun.y = median,
-          position = position_dodge(width = 0.75)
-        ) + 
-       theme(axis.text.x = element_text(angle = 90, hjust = 1))
-      
-      if (threshold >= 0) {
-        p <-
-          p + geom_hline(yintercept = threshold,
-                         linetype = 2,
-                         col = "seagreen")
-      }
-      return(p)
-    }
-    else
-      return(NULL)
-  }
-  
-  output$boxplot <- renderPlot({
-    data_sub_plots <- as.data.frame(data_sub())
-    threshold <-
-      bio_vars_filter[match(colnames(data_sub_plots[6]), bio_vars_filter$name), "threshold1"]
-    return(bio_boxplot(
-      data_sub_plots = data_sub_plots,
-      var_nb = 6,
-      threshold = threshold
-    ))
-  })
-  
-  
-  
-  output$boxplot2 <- renderPlot({
-    data_sub_plots <- as.data.frame(data_sub())
-      return(bio_boxplot(data_sub_plots = data_sub_plots, var_nb = 8))
-    
-  })
-  
-  
-  
-  # Map title
+  # MAP
   output$map_title <- renderText({
     filter_name <-
       bio_vars_filter$name[which(bio_vars_filter$param == input$filter_by)]
@@ -587,7 +309,7 @@ evaluate bioassessment data. For example, it is not clear if the ASCI should be 
       input$wy[2],
       "(Change in map parameters)"
     )
-  })
+  })  # Map title
   
   # Create baseline map
   output$map_sites <- renderLeaflet({
@@ -601,9 +323,6 @@ evaluate bioassessment data. For example, it is not clear if the ASCI should be 
       addMapPane(name = "markers", zIndex = 420)
   })
   
-  
-  
-  # Update map based on user input
   # reset view button
   observe({
     input$reset_button
@@ -612,6 +331,7 @@ evaluate bioassessment data. For example, it is not clear if the ASCI should be 
                                           zoom = 9)
   })
   
+  # Update based on user inputs
   observe({
     req(input$menu_items == "bio_data")
     
@@ -641,9 +361,9 @@ evaluate bioassessment data. For example, it is not clear if the ASCI should be 
     }
     
     # subset watersheds shapefile based on user input
-      sheds_sub <- sheds[sheds$SYSTEM %in% input$ws, ]
+    sheds_sub <- sheds[sheds$SYSTEM %in% input$ws, ]
     
- 
+    
     
     # pop-up window for individual sites
     content <- paste(
@@ -661,9 +381,9 @@ evaluate bioassessment data. For example, it is not clear if the ASCI should be 
     # Customize color and size of circle markers
     
     getColor <- function() {
+      ifelse(
+        is.na(data_sub$filter),"white",
         ifelse(
-          is.na(data_sub$filter),"white",
-          ifelse(
           data_sub$filter < threshold1,
           colors_bio[4],
           ifelse(
@@ -738,22 +458,235 @@ evaluate bioassessment data. For example, it is not clear if the ASCI should be 
     }
   })
   
+  ### 
+  
+  # Summary barplot 
+  output$barplot <- renderPlot({
+    data_sub <- data_sub() 
+    
+    name_score <- colnames(data_sub)[6]
+    data_sub$score_cat <- cut(x=data_sub[,6], breaks=c(bio_vars_filter[bio_vars_filter$name == name_score,3:6],1000),
+                              labels=c("Very Likely Altered", "Likely Altered","Possibly Intact", "Likely Intact"))
+    
+    data_sub <- data_sub %>% 
+      dplyr::filter(!is.na(score_cat))
+    n=2
+    
+    if (length(unique(data_sub[,2]))==1){n <- 3}
+    n_name <- ifelse(n==2,'Watershed',"Subwatershed")
+    
+    if (!input$show_bar_pct){
+          p <- ggplot(data = data_sub, aes(x = data_sub[,n], fill = score_cat)) + geom_bar()+ ylab("Number of samples")
+    }
+    
+    else {
+      data_sub <- data_sub  %>% 
+        dplyr::rename("x_axis"=!!names(.[n]),
+              "score" = !!names(.[6])) %>% 
+        dplyr::group_by(x_axis, score_cat, score) %>% 
+        dplyr::summarise(n = n()) 
 
+      p <- ggplot(data = data_sub, aes(x = x_axis, y=n, fill = score_cat)) + geom_bar(position="fill",stat='identity') + ylab("Percentage of samples") +
+        scale_y_continuous(labels = percent_format())
+    }
+    
+    p <- p + 
+      scale_fill_manual(values=colors_bio) + 
+      xlab(n_name) + 
+      theme(axis.text.x = element_text(angle = 40, hjust = 1, size=12), 
+            legend.position = "top", legend.box="vertical", legend.title = element_blank(), 
+            text = element_text(size=12)) 
+    
+    
+    return(p)
+
+  
+  })
+  
+
+  
+
+# Score vs. stressor ######################################################
+  
+  # List of selected watersheds
+  ws_list <- reactive({
+    ifelse(
+      length(input$ws) < length(unique(bio_vars_ws)),
+      paste(
+        "Selected watersheds: ",
+        paste(input$ws, collapse = ", "),
+        sep = ""
+      ),
+      "All watersheds"
+    )
+  })
+  
+  output$ws_list_2 <- renderText({
+    ws_list()
+  })
+  
+  
+  # Scatter Plots: indicator vs. stressor variable
+  output$scatterplots <- renderText({
+      paste("Scatterplots for ", input$wy[1], " - ", input$wy[2], sep =
+              "")
+  })
+  
+  output$cond_scatter <- renderUI({
+    if (nrow(data_sub()) <= 1 ||
+        sum(!is.na(data_sub()[, (ncol(data_sub())-1)])) <= 1 ||
+        sum(!is.na(data_sub()[, (ncol(data_sub())-2)])) <= 1 ) {
+      h5(
+        "No data to show: Make sure you selected a stressor variable and there are at least two assessment events for the selected time period/watersheds"
+      )
+    }
+    else {
+      plotOutput("scatter1")
+    }
+  })
+  
+  output$scatter1 <- renderPlot({
+    data_sub_plots <- as.data.frame(data_sub())
+    x_var <- data_sub_plots[, 7]
+    y_var <- data_sub_plots[, 6]
+    p <- ggplotRegression(y=y_var,x= x_var) +
+      xlab(colnames(data_sub_plots)[7]) + ylab(colnames(data_sub_plots)[6]) + 
+      theme(text=element_text(size=12))
+    return(p)
+  })
+  
+  # Scatterplots pop-up help window 
+  observeEvent(input$interpret_scatter,{
+    showModal(modalDialog(
+      title = "Scatterplot coefficients",
+      HTML("<p><b>Pearson</b>'s correlation test assesses the strength of the <i>linear relationship</i>
+              between two variables (assumed to be normally distributed). 
+              Both R-squared and p-value can take values between 0 and 1. The closer R-squared is to 1, the stronger the relationship. 
+              The relationship is generally considered to be significant if p-value is below the significance level (e.g. 0.05). </p>
+            </br>
+            <p><b>Spearman</b>'s correlation test assesses the strength of the <i>monotonic relationship</i> (i.e. either decreasing or increasing, 
+              but not necessarily linear) between the two variables, regardless of their distribution (non-parametric test). 
+              Spearman's Rho can take values between +1 and -1. Values of +1 or -1 indicate a strong monotonic relationship, whether the variables are
+              negatively (-) or positively (+) correlated. p-values below 0.05 are generally considered significant.</p>"),
+      easyClose = TRUE, footer=modalButton("Got it!")
+    ))
+  })
+  
+  
+  
+  # Boxplots 
+  output$boxplots <- renderText({
+      paste("Boxplots for ", input$wy[1], " - ", input$wy[2], sep =
+              "")
+  })
+  output$cond_boxplot <- renderUI({
+    if (nrow(data_sub()) == 0)
+    {
+      h5(
+        "No data to show (no samples for this watershed/time period OR no parameter selected in map parameters)"
+      )
+    }
+    else {
+      plotOutput("boxplot")
+    }
+  })
+  
+  bio_boxplot <- function(data_sub_plots,
+                          var_nb = 8,
+                          threshold = -1) {
+    if (nrow(data_sub_plots) > 0) {
+      x_var <- data_sub_plots[,2]
+      x_var_name <- "Watersheds"
+      if (length(unique(x_var))==1) {x_var <- data_sub_plots[,3]
+      x_var_name="Subwatersheds"}
+      
+      y_var <- data_sub_plots[, var_nb]
+      df_tempo <- data.frame(x_var = x_var, y_var = y_var)
+      p <-
+        ggplot(df_tempo, aes(x = x_var, y = y_var)) + geom_boxplot(col = rgb(0, 0, 1, 0.6)) +
+        xlab(x_var_name) + ylab(colnames(data_sub_plots[var_nb])) +
+        stat_summary(
+          fun.data = give_tot,
+          geom = "text",
+          fun.y = median,
+          position = position_dodge(width = 0.75)
+        ) + 
+       theme(axis.text.x = element_text(angle = 35, hjust = 1, size=12))
+      
+      if (threshold >= 0) {
+        p <-
+          p + geom_hline(yintercept = threshold,
+                         linetype = 2,
+                         col = "seagreen")
+      }
+      return(p + theme(text=element_text(size=12)))
+    }
+    else
+      return(NULL)
+  }
+  
+  output$boxplot <- renderPlot({
+    data_sub_plots <- as.data.frame(data_sub())
+    threshold <-
+      bio_vars_filter[match(colnames(data_sub_plots[6]), bio_vars_filter$name), "threshold1"]
+    return(bio_boxplot(
+      data_sub_plots = data_sub_plots,
+      var_nb = 6,
+      threshold = threshold
+    ))
+  })
+  output$boxplot2 <- renderPlot({
+    data_sub_plots <- as.data.frame(data_sub())
+      return(bio_boxplot(data_sub_plots = data_sub_plots, var_nb = 7))
+    
+  })
+  
+  # Detailed datatable score + stressor 
+  output$score_table <- renderText({
+    HTML("<b>Score table for ", input$wy[1], " - ", input$wy[2], "</b>")
+  })
+  output$score_stressor_table <- DT::renderDataTable({
+    t <- data_sub()
+    
+    name_score <- colnames(t)[6]
+    name_stressor <- colnames(t)[7]
+    
+    intervals <- bio_vars_filter[bio_vars_filter$name == name_score,4:6]
+    
+    return(datatable(t[1:7])%>%
+             formatStyle(
+               name_score,
+               color = styleInterval(intervals, c("white","black", "black", "black")),
+               backgroundColor = styleInterval(intervals, colors_bio[c(4,3,2,1)])) %>% 
+             formatRound(columns=c(name_score,name_stressor), digits=3))
+    
+    
+  })
+  
+
+# Score vs. second score #################################################
 
   # Scatterplots: Score Comparisons
-output$bio_score_comp <- renderPlot({
+  output$bio_score_comp <- renderPlot({
   data_sub_plots <- as.data.frame(data_sub())
-  if ( ncol(data_sub_plots)== 9){
-  y_var <- data_sub_plots[, 9]
+  p<- NULL
+  
+  if(nrow(data_sub_plots)>=2){
+   if ( ncol(data_sub_plots)== 8){
+  y_var <- data_sub_plots[, 8]
   x_var <- data_sub_plots[, 6]
   p <- ggplotRegression(y=y_var,x= x_var) +
-    xlab(colnames(data_sub_plots)[9]) + ylab(colnames(data_sub_plots)[6])}
+    xlab(colnames(data_sub_plots)[8]) + ylab(colnames(data_sub_plots)[6])}
   else { 
   y_var <- data_sub_plots[, 6]
   x_var <- data_sub_plots[, 6]
   p <- ggplotRegression(y=y_var,x= x_var) +
-    xlab(colnames(data_sub_plots)[6]) + ylab(colnames(data_sub_plots)[6])}
-  return(p)
+    xlab(colnames(data_sub_plots)[6]) + ylab(colnames(data_sub_plots)[6])} 
+  }
+  
+  return(p + 
+           theme(text=element_text(size=12))
+  )
 })
   
   

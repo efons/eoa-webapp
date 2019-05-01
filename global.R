@@ -154,6 +154,7 @@ colors_bio <- c(rgb(166,219,160,maxColorValue = 255),
                 rgb(254,235,160,maxColorValue = 255), 
                 rgb(255,109,70,maxColorValue = 255),
                 rgb(118,42,131,maxColorValue = 255))
+names(colors_bio) <- c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered")
 
 # subwatershed groups list
 subws <- lapply(bio_vars_ws, function(x) (unique(sites[sites$watershed == x & !is.na(sites$watershed), "subwatershed"]))$subwatershed)
@@ -550,9 +551,13 @@ ggplotRegression <- function (x,y) {
   
   fit <- lm(y~x)
   lb1 <- paste(sep="", "R-squared = ", signif(summary(fit)$r.squared, 4))
-  lb2 <- paste(sep="", "p-value = ",signif(summary(fit)$coef[2,4], 3))
+  p_val_2 <- signif(summary(fit)$coef[2,4], 3)
+  lb2 <- ifelse(p_val_2 <0.001,
+                paste(sep="", "p-value < 0.001"), paste(sep="", "p-value =", p_val_2))
   lb3 <- paste(sep="", "Rho = ",signif(cor.test(x=x,y=y,method="spearman",use="complete.obs", exact = F)$estimate,4))
-  lb4 <- paste(sep="", "p-value = ",signif(cor.test(x=x,y=y,method="spearman",use="complete.obs", exact=F)$p.value,3))
+  p_val_4 <- signif(cor.test(x=x,y=y,method="spearman",use="complete.obs", exact=F)$p.value,3)
+  lb4 <- ifelse(p_val_4 <0.001,
+    paste(sep="", "p-value < 0.001"), paste(sep="", "p-value =", p_val_4))
   
   
   
