@@ -150,10 +150,8 @@ bio_score_list <- list("California Stream Condition Index (CSCI)"=c('Indicator: 
 )
 bio_vars_ws <- sort(factor(unique(sheds$SYSTEM), levels=sort(unique(as.character(sheds$SYSTEM)))))
 
-colors_bio <- c(rgb(166,219,160,maxColorValue = 255), 
-                rgb(254,235,160,maxColorValue = 255), 
-                rgb(255,109,70,maxColorValue = 255),
-                rgb(118,42,131,maxColorValue = 255))
+colors_bio <- c(rgb(163,224,129,maxColorValue = 255),rgb(254,255,117,maxColorValue = 255),
+                rgb(255,127,125,maxColorValue = 255),rgb(224,114,254,maxColorValue = 255))
 names(colors_bio) <- c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered")
 
 # subwatershed groups list
@@ -168,8 +166,10 @@ names(subws) <- bio_vars_ws
 ############################################################################################################################
 ############################################################################################################################
 
-colors_PCB <- c("green", "orange", "red", "purple")
-colors_Hg <- c('grey',"green", "orange", "red")
+colors_PCB <- colors_bio
+names(colors_PCB) <- levels(df_POC$pcb_conc_cat)
+colors_Hg <- c('grey',colors_bio[1:3])
+names(colors_Hg) <- c("None", "<0.3 mg/kg", "0.3 - 1.0 mg/kg", ">1.0 mg/kg")
 
 df_POC <- read_excel("POC_Sediment_Samples.xlsx", sheet="SC") %>% 
   dplyr::select(1:6,8:9,11,14) %>% 

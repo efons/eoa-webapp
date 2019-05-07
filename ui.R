@@ -49,8 +49,23 @@
       tags$head(tags$style(
         HTML('.content-wrapper {
              overflow-y:scroll
-             } 
-             .small-box {height: 100px}'))),
+        }
+            .box.box-solid.box-primary>.box-header {
+                                color:#FFFFFF;
+                                background-color:#007bff;}
+
+                                .box.box-solid.box-primary{
+                                border-bottom-color:#007bff;
+                                border-left-color:#007bff;
+                                border-right-color:#007bff;
+                                border-top-color:#007bff;
+                                }
+             .small-box {height: 100px}
+             
+            .bg-aqua {background-color: #007bff!important }
+             ')))
+      ,
+    
       tags$script(js),
       
 # Overview #################################################################################################################################        
@@ -93,9 +108,10 @@
 # Bioassessment #################################################################################################################################        
         tabItem(
           tabName = "bio_data", 
-          tags$div(title="Click here for instructions",actionLink(inputId="bio_tab_title", label=" ", icon=icon("question-circle"))),
-          h2("Biological Condition Assessment"),
-   
+          tags$div(title="Click here for instructions",
+                   actionLink(inputId="bio_tab_title", label="Biological Condition Assessment", style="font-size:160%")),
+          br(),
+
         # Box for bio score selection
           box(width=12,
               div(style = "font-weight:bold; color:orange; text-align:center",
@@ -139,7 +155,6 @@
                    
                    # Download options
                    h4("Data Download:"),
-                   textOutput("bio_dwld_info"),
                    radioButtons("file_type", label=NULL, inline = T,
                                     choices = c(".csv", ".xlsx", ".shp")), 
                    checkboxGroupInput("score_dwlnd", label=NULL,
@@ -149,8 +164,11 @@
                                                             "ASCI: (Hybrid)" = "asci_hyb",
                                                             "CRAM" = "cram"), selected=c("csci", "asci_soft_alg", "asci_diatom", "asci_hyb", "cram")),
                   
-                   downloadButton("downloadData", label = "Data Download"))),
-          
+                   downloadButton("downloadData", label = "Data Download"),
+                   br(),
+                   div(style="font-style:italic",textOutput("bio_dwld_info"))))
+                   ,
+
 
         
         # Box with all outputs: map, graphs, tables 
@@ -159,14 +177,19 @@
          
         #  MAP
          tabPanel(title="Score Map", id="map",
-                  
-                  fluidRow(column(12, leafletOutput("map_sites"))),
+                  fluidRow(column(12, 
+                                  div(style="font-weight:bold",textOutput("map_title")),
+                                  br(),
+                                  leafletOutput("map_sites"))),
                   br(),
                   fluidRow(column(3,actionButton("reset_button", "Reset view")))), 
          
         # Summary plot 
          tabPanel(title='Score Plot', id="summary_plot",
-                  fluidRow(column(10,offset=1,plotOutput("barplot"))),      
+                  fluidRow(column(10,offset=1,
+                                  div(style="font-weight:bold",textOutput("barplot_title")),
+                                  br(),
+                                  plotOutput("barplot"))),      
                   prettyCheckbox(inputId="show_bar_pct", label= "Show as %?")),
          
          
@@ -239,7 +262,7 @@
              plotOutput("boxplot2"), 
              br(), br(), 
              
-           textOutput("score_table"),
+             div(style = "font-weight:bold", textOutput("score_table")),
            br(),
            dataTableOutput("score_stressor_table")
            ))),
@@ -285,8 +308,9 @@
   
   tabItem(
     tabName = "con_wq",
-    h2("Seasonal Water Quality Monitoring"), 
-    actionLink(inputId="wq_desc", label=" ", icon=icon("question-circle")),
+  
+    actionLink(inputId="wq_desc",  label="Seasonal Water Quality Monitoring", style="font-size:160%"),
+    br(), 
     
     # Box for inputs
     fluidRow(
@@ -348,10 +372,13 @@
       )
     )
   ,
-  
+
+
+# Continuous Temperature ####################################################################################
+
   tabItem(tabName="con_temp",
-          h2("Continuous Temperature Monitoring"),
-          actionLink(inputId="temp_desc", label=" ", icon=icon("question-circle")),
+          actionLink(inputId="temp_desc",  label="Continuous Temperature Monitoring", style="font-size:160%"),
+          br(), 
           
           # Box for inputs
           fluidRow(
@@ -402,11 +429,12 @@
           plotOutput("temp_timeseries_2"))),
   
   
-  
+# Pathogens ####################################################################################################
   
   
   tabItem(tabName = "pathogens",
-          h2("Bacterial Indicators"),
+          actionLink(inputId="patho_desc",label="Bacterial Indicators", style="font-size:160%"),
+          br(),
           h4("Under construction"),
           
           # Box for inputs 
@@ -435,10 +463,12 @@
           
   
   
-  # Chlorine Menu Item
+  # Chlorine #############################################################################################
   tabItem(
     tabName = "chlorine",
-    h2("Chlorine"),
+    actionLink(inputId="chlor_desc",label="Chlorine", style="font-size:160%"),
+    br(),
+    
     h4("Under construction"), 
     
     # Box for inputs 
@@ -466,9 +496,11 @@
     
     
   ),
-  
+
+  # Pesticide ##############################################################################################
   tabItem(tabName = "pesticide",
-          h2("Pesticides"),
+          actionLink(inputId="pesti_desc",label="Pesticides", style="font-size:160%"),
+          br(),
           h4("Under Construction"), 
           
           # Box for inputs 
@@ -489,11 +521,13 @@
   
   
   
-  # POC Menu Item
+  # POC ##########################################################################################################
   tabItem(
     tabName = "poc",
-    h2("Pollutants of Concern"),
+    actionLink(inputId="poc_desc",label="Pollutants of concern", style="font-size:160%"),
+    
     h4("Concentration of Mercury and PCBs in sediments across the Santa Clara Valley"), 
+    br(),
     h4("Under construction"), 
     
     # Box for inputs 
@@ -515,10 +549,10 @@
     
   ),
   
-  
-  # Trash Menu Item
+# Trash: Receiving Water ####################################################################################
   tabItem(tabName = "trash",
-          h2("Trash Pollution"),
+          actionLink(inputId="trash_desc",label="Trash in Receiving Waters", style="font-size:160%"),
+          br(),
           h4("Receiving Water Monitoring... Preliminary Results... Targeted Sites only"),
           
           column(3,

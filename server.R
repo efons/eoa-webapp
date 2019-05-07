@@ -290,7 +290,7 @@ server <- (function(input, output, session) {
   
   
   output$bio_dwld_info <- renderText({
-    paste0("Download data for the ", input$wy[1],"-", input$wy[2], " period, for ", length(input$ws), " watershed(s)", " and for the following scores: ", paste0(bio_vars_filter[bio_vars_filter$param %in% input$score_dwlnd,"name"], collapse=", "))
+    paste0("Downloading data for the ", input$wy[1],"-", input$wy[2], " period, for ", length(input$ws), " watershed(s)", " and for the following scores: ", paste0(bio_vars_filter[bio_vars_filter$param %in% input$score_dwlnd,"name"], collapse=", "))
   })
   
 
@@ -306,8 +306,7 @@ server <- (function(input, output, session) {
       "for ",
       input$wy[1],
       " - ",
-      input$wy[2],
-      "(Change in map parameters)"
+      input$wy[2]
     )
   })  # Map title
   
@@ -458,9 +457,22 @@ server <- (function(input, output, session) {
     }
   })
   
-  ### 
-  
+
   # Summary barplot 
+  
+  output$barplot_title <- renderText({
+    filter_name <-
+      bio_vars_filter$name[which(bio_vars_filter$param == input$filter_by)]
+    paste(
+      "Barplot of ",
+      filter_name,
+      "for ",
+      input$wy[1],
+      " - ",
+      input$wy[2]
+    )
+  })  
+  
   output$barplot <- renderPlot({
     data_sub <- data_sub() 
     
@@ -643,7 +655,7 @@ server <- (function(input, output, session) {
   
   # Detailed datatable score + stressor 
   output$score_table <- renderText({
-    HTML("<b>Score table for ", input$wy[1], " - ", input$wy[2], "</b>")
+   paste("Score table for ", input$wy[1], " - ", input$wy[2])
   })
   output$score_stressor_table <- DT::renderDataTable({
     t <- data_sub()
