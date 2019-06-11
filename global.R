@@ -29,46 +29,36 @@ library(shinyWidgets)
 library(magrittr)
 library(rgdal)
 library(lubridate)
-library(stringr)
 library(scales)
 library(beanplot)
 library(DT)
 library(RColorBrewer)
 library(htmltools)
+library(reshape2)
 
 
 
-#  - Import spatial files to be used for mapping
+#  - Import spatial files 
 ################################################################################################################################################
-################################################################################################################################################
+
 # watersheds delineation 
 sheds <- readOGR("./shp/SBC_Sheds_SCC_Only_w_Alameda.shp", GDAL1_integer64_policy = F) %>%
   spTransform(CRS("+init=epsg:4326"))
 
 # creeks 
-#creeks <- readOGR("M:/Santa Clara/Hydrography/Surface Waters/Working/scvurppp_creeks.shp") %>%
+# creeks <- readOGR("M:/Santa Clara/Hydrography/Surface Waters/Working/scvurppp_creeks.shp") %>%
 # spTransform(CRS("+init=epsg:4326"))
 # is there a file with a ws data field as well? 
 
 
 # sites info 
-sites <- read_excel("sites master file.xlsx", na=c("", "NA", "#N/A"),sheet="copy_01.29") %>%
-  arrange(rmc_id)
+sites <- read_excel("sites master file.xlsx", na=c("", "NA", "#N/A"),sheet="copy_05.2019") %>%
+  arrange(rmc_id) %>% 
+  dplyr::mutate(id=ifelse(historic=="Historical SCVURPPP", station_code, rmc_id))
 # useful for biodata, chlorine 
 
 
-# make sure shp watershed names are consistent with sites file
-ws <- c("Lower Penitencia", "San Francisquito", "Coyote", "Matadero/Barron", "Adobe", "Sunnyvale West", "Guadalupe", "Permanente", "Calabazas", "San Tomas Aquino", "Sunnyvale East","Stevens")
-sites$watershed <- ifelse(!is.na(sites$watershed) & sites$watershed == "San Thomas Aquino", "San Tomas Aquino", sites$watershed)
-sites$watershed <- ifelse(!is.na(sites$watershed) & sites$watershed == "Matadero Creek", "Matadero/Barron Creeks", sites$watershed)
-sites$watershed <- mapvalues(sites$watershed, from=unique(sites$watershed), to=c(NA,"Alameda","Coyote","Guadalupe", "San Tomas Aquino", "Calabazas", "Stevens", "Lower Penitencia","Matadero/Barron","Adobe","Permanente","San Francisquito"))
 
-ws_sheds <- unique(sheds$SYSTEM)
-
-# Make sure creek names are consistent with sites file 
-# later 
-#vars_creek <- unique(creeks$NAME)
-#vars_creek # 196 creeks
 
 
 
@@ -77,18 +67,13 @@ ws_sheds <- unique(sheds$SYSTEM)
 
 # A - Import and reshape bioassessment data 
 ##############################################################################################################################
-##############################################################################################################################
 
-# upload data
-
-# data 
-df_bio <- read_excel("data_master_bio_2012_18.xlsx", sheet="All",na=c("","NR", "Not Recorded", "NA", "-"))
+# upload bioassessment data
+df_bio <- read_excel("data_master_bio_2003_18.xlsx", sheet="All",na=c("","NR", "Not Recorded", "NA", "-"))
 
 
 # select data fields to be plotted and rename
-old_param_names <- c("Elevation (m)", "BMI Taxa", "Diatom Taxa", "CSCI","D18", "ASCI Hybrid", "ASCI diatoms", "Shannon Diversity (H) of Natural Substrate Types",'Percent Substrate Smaller than Sand (<2 mm)',"Percent Impervious", "Road Density Watershed", "Total N", "Chlorophyll a (mg/m2)", '% Macroalgae Cover', "Mean Filamentous Algae Cover", "IPI Score", "Epifaunal Substrate", "Sediment Deposition", "Channel Alteration", "Total PHAB")
-
-select_param <- c("rmc_id","wb_id","year","sample_date", 
+select_param <- c("rmc_id","wb_id","assmnt_type","year","sample_date", 
                   "bmi_taxa", "diatom_taxa", "csci", "d18", "h20", "s2","asci_hyb","asci_diatom", "asci_soft_alg", "cram",
                   "do_mg_l","ph","alkalinity_mg_l", "sp_cond_us_cm", "temp_c", # water quality
                   "chloride_mg_l",  "tn_mg_l", "tp_mg_l", "uia_ug_l", # Water chemistry
@@ -98,7 +83,7 @@ select_param <- c("rmc_id","wb_id","year","sample_date",
                   "shannon_nst", "pct_smaller_sand", "pct_boulder_ls", "pct_fast_water", "pct_slow_water",# physical habitat metric scores
                   "crhdi_swamp" ) # habitat   
 
-full_names <- c("RMC Station ID","Water Board ID", "Water Year", "Sample Date",
+full_names <- c("RMC Station ID","Water Board ID", "Assessment Type","Water Year", "Sample Date",
                 "Total BMI Taxa", "Total Diatom Taxa", "CSCI Score",'D18 IBI Score',"S2 IBI Score","H20 IBI Score","ASCI Hybrid Score", "ASCI Diatom Score", "ASCI Soft Algae", "CRAM Score", 
                 "Dissolved Oxygen (mg/L)", "pH", "Alkalinity (as CaCO3, mg/L)", "Conductivity (uS/cm)", "Temperature (C)", "Chloride (mg/L)", 
                 "Total Nitrogen (mg/L)", "Total Phosphorus (mg/L)", "Unionized Ammonia (ug/L)",
@@ -108,24 +93,19 @@ full_names <- c("RMC Station ID","Water Board ID", "Water Year", "Sample Date",
                 'Shannon Diversity (H) of Natural Substrate Types','% Substrate Smaller than Sand (<2 mm)', 'Percent Boulders - large & small', 'Percent Fast Water of Reach','Percent Slow Water of Reach',
                 "Human Disturbance Index") # Habitat 
 
-param_names <- data.frame(fullname=c("Watershed","Sub-Watershed","Creek",full_names,"Elevation (m)","Drainage Area (km2)","Percent Impervious - 5K", "Percent Urban - 5K", "Road Density - 5K"), dataname=c("ws","subws","creek", select_param, "elevation_m","drain_area_km2","pct_imperv_5k", "pct_urban_5k","road_dsty_5k")) # add all other parameters from site file
+param_names <- data.frame(fullname=c("Watershed","Sub-Watershed","Creek", "Latitude", "Longitude", full_names,"Elevation (m)","Drainage Area (km2)","Percent Impervious - 5K", "Percent Urban - 5K", "Road Density - 5K"), dataname=c("ws","subws","creek","lat", "long", select_param, "elevation_m","drain_area_km2","pct_imperv_5k", "pct_urban_5k","road_dsty_5k")) # add all other parameters from site file
 
 
 # subset bioassessment data
-df_bio <- df_bio %>% filter(year %in% seq(2012,2018,1)) %>% dplyr::select(select_param) %>%
+df_bio <- df_bio %>% dplyr::select(select_param) %>%
   arrange(rmc_id) %>%
-  mutate( epifaun_substr=as.numeric(epifaun_substr),
+  mutate(id = ifelse(assmnt_type=="Historical SCVURPPP", wb_id, rmc_id), 
+        epifaun_substr=as.numeric(epifaun_substr),
          sed_deposition = as.numeric(sed_deposition)) %>% 
-  mutate(lat = sites$lat[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
-         long = sites$long[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
-         elevation_m = sites$elevation_m[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
-         drain_area_km2 = sites$drain_area_km2[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
-         ws = sites$watershed[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
-         subws = sites$subwatershed[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
-         creek= sites$creek[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
-         pct_imperv_5k=sites$pct_imperv_5k[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
-         road_dsty_5k=sites$road_dsty_5k[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)],
-         pct_urban_5k=sites$pct_urban_5k[which(!(is.na(sites$rmc_id)) & sites$rmc_id %in% rmc_id)]) %>%
+  left_join(dplyr::select(sites,
+                          "id","lat", "long", "elevation_m", "drain_area_km2", 
+                          "ws", "subws", "creek", "pct_imperv_5k", "road_dsty_5k", 
+                          "pct_urban_5k"), by="id") %>%
   mutate(pct_imperv_5k =  pct_imperv_5k * 100,
          pct_urban_5k =  pct_urban_5k * 100) %>% 
   mutate(ws = factor(ws, levels=sort(unique(ws))),
@@ -134,7 +114,7 @@ df_bio <- df_bio %>% filter(year %in% seq(2012,2018,1)) %>% dplyr::select(select
 
 
 # Variables that will be used in ui and server
-bio_vars_yr <- unique(df_bio$year)
+bio_vars_yr <- c(min(df_bio$year),max(df_bio$year))
 bio_vars_filter <- data.frame(param=c("csci", "asci_hyb", "asci_diatom", "asci_soft_alg", 's2',"d18", 'h20',"tot_phab", "cram"),
                           name= c("CSCI Score", "ASCI Hybrid Score", "ASCI Diatom Score", "ASCI Soft Algae","S2 Benthic Algae Score", "D18 Benthic Algae Score","H20 Benthic Algae Score", "Total PHAB", "CRAM Score"),
                           threshold0=rep(0,9),
@@ -144,10 +124,8 @@ bio_vars_filter <- data.frame(param=c("csci", "asci_hyb", "asci_diatom", "asci_s
 bio_score_list <- list("California Stream Condition Index (CSCI)"=c('Indicator: Benthic Macroinvertebrate'="csci"),
      "Algae Stream Condition Indices (ASCIs)"=c("Indicator: Soft Algae"="asci_soft_alg",
                                                 "Indicator: Diatoms" = "asci_diatom",
-                                                "Indicator: Diatoms-Soft Algae (Hybrid)" = "asci_hyb"
-     ),
-     "Riparian Habitat Condition" = c("CRAM Score" = "cram")
-)
+                                                "Indicator: Diatoms-Soft Algae (Hybrid)" = "asci_hyb"),
+     "Riparian Habitat Condition" = c("CRAM Score" = "cram"))
 bio_vars_ws <- sort(factor(unique(sheds$SYSTEM), levels=sort(unique(as.character(sheds$SYSTEM)))))
 
 colors_bio <- c(rgb(163,224,129,maxColorValue = 255),rgb(254,255,117,maxColorValue = 255),
@@ -155,52 +133,50 @@ colors_bio <- c(rgb(163,224,129,maxColorValue = 255),rgb(254,255,117,maxColorVal
 names(colors_bio) <- c("Likely Intact", "Possibly Intact", "Likely Altered", "Very Likely Altered")
 
 # subwatershed groups list
-subws <- lapply(bio_vars_ws, function(x) (unique(sites[sites$watershed == x & !is.na(sites$watershed), "subwatershed"]))$subwatershed)
+subws <- lapply(bio_vars_ws, function(x) (unique(sites[sites$ws == x & !is.na(sites$ws), "subws"]))$subws)
 names(subws) <- bio_vars_ws
 
 
+##### 
 
 
 
 # B - Import and reshape POC data 
 ############################################################################################################################
-############################################################################################################################
+
+df_POC <- read_excel("POC_Sediment_Samples.xlsx", sheet="SC") %>% 
+  dplyr::select(1:9) %>% 
+  mutate(pcb_conc_cat = cut(pcbs_mg_kg, breaks=c(0,0.2,0.5,1,Inf), right=F, labels=c("<0.2 mg/kg","0.2 - 0.5 mg/kg","0.5 - 1.0 mg/kg",">1.0 mg/kg")),
+         hg_conc_cat = cut(hg_mg_kg, breaks=c(-Inf,0, 0.3,1,Inf), right=F, labels=c("None","<0.3 mg/kg","0.3 - 1.0 mg/kg",">1.0 mg/kg"))) %>%
+  #mutate(hg_mg_kg = ifelse(hg_mg_kg > 0, hg_mg_kg,0)) %>% 
+  filter(!is.na(samp_date)) %>% 
+  mutate(year = year(samp_date))
+
+poc_vars_yr <- sort(as.numeric(unique(year(df_POC$samp_date))))
+length(unique(df_POC$site_id)) # /!\ duplicate sites <- fix for point visualization 
+
 
 colors_PCB <- colors_bio
 names(colors_PCB) <- levels(df_POC$pcb_conc_cat)
 colors_Hg <- c('grey',colors_bio[1:3])
-names(colors_Hg) <- c("None", "<0.3 mg/kg", "0.3 - 1.0 mg/kg", ">1.0 mg/kg")
-
-df_POC <- read_excel("POC_Sediment_Samples.xlsx", sheet="SC") %>% 
-  dplyr::select(1:6,8:9,11,14) %>% 
-  mutate(pcb_conc_cat = factor(pcb_conc_cat, levels=c("<0.2 mg/kg","0.2 - 0.5 mg/kg","0.5 - 1.0 mg/kg",">1.0 mg/kg")),
-         hg_conc_cat = factor(hg_conc_cat, levels=c("None","<0.3 mg/kg","0.3 - 1.0 mg/kg",">1.0 mg/kg"))) %>%
-  mutate(pcb_col = colors_PCB[as.numeric(pcb_conc_cat)], hg_col = colors_Hg[as.numeric(hg_conc_cat)]) %>%
-  mutate(hg_mg_kg = ifelse(hg_mg_kg > 0, hg_mg_kg,0)) %>% 
-  filter(!is.na(samp_date)) %>% 
-  mutate(year = year(samp_date))
-
-poc_vars_yr <- as.numeric(unique(year(df_POC$samp_date)))
-poc_vars_yr <- sort(poc_vars_yr)
-length(unique(df_POC$site_id)) # /!\ duplicate sites <- fix for point visualization 
+names(colors_Hg) <- levels(df_POC$hg_conc_cat)
 
 
 
+
+
+#####
 
 
 
 # C - Import and reshape continuous water quality data 
 ###########################################################################################################################################
-###########################################################################################################################################
-sites_char <- read_excel("Cont Temp and WQ stations 2012_2018.xlsx", sheet="ALL") %>% 
-  mutate(ws=factor(ws))
-sites_char$ws <- mapvalues(sites_char$ws, from = unique(sites_char$ws), to=c("Coyote","Guadalupe","San Tomas Aquino","Stevens"))
 
+# import seasonal water quality data
 df_wq <- read_excel("data_master_wq_2012_18.xlsx", sheet= "SC WQ ALL") %>%
   mutate(year = year(date)) %>%
   mutate(season = factor(ifelse((month(date) == 5 | month(date) == 6 | month(date) == 7), "S", "F"), levels=c("S", "F"))) %>% 
-  mutate(ws = sites_char[match(site_id,sites_char$`Station Number`),"ws"]$ws, 
-         creek= sites_char[match(site_id,sites_char$`Station Number`),"creek"]$creek) %>% 
+  left_join(dplyr::select(sites, "station_code", "ws", "creek"), by=c("site_id"="station_code")) %>% 
   mutate(temp_c = ifelse(str_detect(comment, "malfunction"), NA, temp_c),
          ph = ifelse(str_detect(comment, "malfunction") | str_detect(comment, "pH"), NA, ph),
          sp_cond_us_cm = ifelse(str_detect(comment, "malfunction") | str_detect(comment, "SpCond"), NA, sp_cond_us_cm),
@@ -208,32 +184,23 @@ df_wq <- read_excel("data_master_wq_2012_18.xlsx", sheet= "SC WQ ALL") %>%
          do_pct = ifelse(str_detect(comment, "malfunction") | str_detect(comment, "DO"), NA, do_pct)) %>% 
   arrange(year)
 
-
+# import continuous temperature data
 df_temp <-  read_excel("data_master_wq_2012_18.xlsx", sheet= "SC ConTemp", col_types=c("text","text", "date", "text")) %>% 
   mutate(year =year(date)) %>% # make factor or ordered num 
   arrange(year) %>% 
-  mutate(ws = sites_char[match(site_id,sites_char$`Station Number`),"ws"]$ws,
-         creek= sites_char[match(site_id,sites_char$`Station Number`),"creek"]$creek,
-         ctemp_c =as.numeric(ctemp_c))
+  left_join(dplyr::select(sites, "station_code", "ws", "creek"), by=c("site_id"="station_code")) %>% 
+  dplyr::mutate(ctemp_c =as.numeric(ctemp_c))
 
 
 # data frame with unique site Id's for mapping 
-
 all_sites_wq <- unique(c(unique(df_wq$site_id),unique(df_temp$site_id)))
 
-sites_cWQ <- data.frame(site_id = all_sites_wq,
-                        lat= sites_char[match(all_sites_wq,sites_char$`Station Number`),"lat"],
-                        long= sites_char[match(all_sites_wq,sites_char$`Station Number`),"long"],
-                        ws = sites_char[match(all_sites_wq,sites_char$`Station Number`),"ws"],
-                        sub_ws = sites_char[match(all_sites_wq,sites_char$`Station Number`),"creek"],
-                        wq_TF = all_sites_wq %in% unique(df_wq$site_id),
-                        ctemp_TF = all_sites_wq %in% unique(df_temp$site_id),
-                        both_TF = all_sites_wq %in% unique(df_wq$site_id) & all_sites_wq %in% unique(df_temp$site_id)) %>% 
-  mutate(marker_group = ifelse(wq_TF & ctemp_TF, 3, ifelse(ctemp_TF,2,1))) %>% 
-  mutate(sampl_dates_wq = ifelse(marker_group == 1 | marker_group == 3, as.character(paste0(unique(df_wq[which(df_wq$site_id %in% site_id),"year"]),collapse=", ")),
-                                 NA),
-         sampl_dates_temp = ifelse(marker_group == 2 | marker_group == 3, paste0(unique(df_temp[which(df_temp$site_id %in% site_id),"year"]),collapse=", "),
-                                   NA))
+sites_cWQ <- data.frame(site_id = all_sites_wq) %>% 
+  left_join(dplyr::distinct(dplyr::select(sites, "station_code","lat", "long", "ws", "creek"), station_code, .keep_all=T), by=c("site_id"="station_code")) %>% 
+  dplyr::mutate(wq_TF = all_sites_wq %in% unique(df_wq$site_id),
+                ctemp_TF = all_sites_wq %in% unique(df_temp$site_id), 
+                both_TF = all_sites_wq %in% unique(df_wq$site_id) & all_sites_wq %in% unique(df_temp$site_id)) %>% 
+  dplyr::rename("sub_ws" = "creek")
 
 # parameters to be used for inputs 
 wq_vars_yr <- as.numeric(unique(year(df_temp$date)))  
@@ -256,7 +223,7 @@ wq_STA <- factor(c('205SAR050', '205SAR060', '205SAR070', '205SAR075', '205SAR08
 wq_STE <- factor(c('205STE064','205STE065', '205STE070', '205STE071', '205STE095', '205STE105'))
 wq_COY_1 <- sites_cWQ[sites_cWQ$ws=="Coyote","site_id"]
 wq_COY_2 <- factor(wq_COY_1[c(3,2,8,4,1)])
-wq_COY_1 <- factor(wq_COY_1[c(9,6,5,7,10,14,11,12,15,13)])
+wq_COY_1 <- factor(wq_COY_1[c(9,6,5,7,10,14,11,12,15,13)]) # TO DO: write site ids instead
 
 wq_sites <- unlist(lapply(X=list(wq_GUA_1, wq_GUA_2, wq_STA, wq_STE, wq_COY_1, wq_COY_2),as.character))
 wq_sites <- factor(wq_sites)
@@ -267,8 +234,7 @@ df_wq <- df_wq %>%
   mutate(site_id = factor(site_id, levels=wq_sites))
 df_wq$plot_cat <- df_wq$site_id %in% wq_COY_2 +1
 
-# colors for beanplots 
-wq_colors <- rainbow(12)
+
 
 # Important data 
 MRP_threshold <- data.frame(param = c("temp_c", "ph","sp_cond_us_cm" ,"do_mg_l"),
@@ -293,6 +259,13 @@ df_temp_7DAVG <- df_temp %>% mutate(date =as.Date(date)) %>%
   mutate(grp=paste(year, site_id,sep=''))
   
   
+
+
+#####
+
+
+
+
 # D - Creek trash data 
 #############################################################################################################################################
 #############################################################################################################################################
@@ -330,22 +303,23 @@ col_trashCat <-  c(rgb(166,219,160,maxColorValue = 255),
 
 
 
+
 # E - Chlorine data 
-#############################################################################################################################################
 #############################################################################################################################################
 
 # Upload data
 
-
 # monitoring data
-df_chlo <- read_excel("All_chlorine_results_2012-2018.xlsx", sheet="SC") %>%
+df_chlo <- read_excel("All_chlorine_results_2012-2018.xlsx", sheet="SC") %>% 
+  dplyr::mutate(Date=as.Date(Date, format="%m/%d/%Y"), 
+                AnalyteName=factor(AnalyteName),
+                year=year(Date),
+                fy = ifelse(month(Date)<=7, paste(year(Date)-1,"-",year(Date)),paste(year(Date),"-",year(Date+1))))
+df_chlo_aggreg <- df_chlo %>%
   dplyr::filter(FieldReplicate == 1,
                 QACode == "None", 
                 !is.na(Result)) %>%  # all duplicate results in a year are deleted for now
   # for later: keep duplicate when triggered by exceedance and show conc as well in popup
-  dplyr::mutate(Date=as.Date(Date, format="%m/%d/%Y"), 
-                AnalyteName=factor(AnalyteName),
-                fy = ifelse(month(Date)<=7, paste(year(Date)-1,"-",year(Date)),paste(year(Date),"-",year(Date+1)))) %>% 
   dplyr::arrange(Date) %>%
   dplyr::group_by(StationName, AnalyteName) %>% 
   dplyr::summarize(n=n(),
@@ -358,21 +332,24 @@ df_chlo <- read_excel("All_chlorine_results_2012-2018.xlsx", sheet="SC") %>%
                   qa_1 = first(ResQualCode),
                   qa_2 = nth(x=ResQualCode, n=2, default=NA), 
                   qa_3 = nth(x=ResQualCode, n=3, default=NA))
-  # ifelse(AnalyteName=="Chlorine, Total Residual",sites[match(StationName, sites$station_code), "long"]$long, jitter(sites[match(StationName, sites$station_code), "long"]$long,100)) %>%   dplyr::arrange(AnalyteName)
 
 
 # site data
 sites_chlo <- sites %>% 
-  dplyr::filter(station_code %in% df_chlo$StationName) %>%
+  dplyr::filter(station_code %in% df_chlo_aggreg$StationName) %>%
   dplyr::distinct(station_code, .keep_all=T)
-sites_chlo <- merge(sites_chlo[,c(1,6,7,10:12)], df_chlo[df_chlo$AnalyteName == "Chlorine, Free",c(1,4:12)], by.x="station_code", by.y="StationName") %>% 
+sites_chlo <- merge(sites_chlo[,c("station_code","long","lat","ws", "subws", "creek")], df_chlo_aggreg[df_chlo_aggreg$AnalyteName == "Chlorine, Free",c(1,4:12)], by.x="station_code", by.y="StationName") %>% 
   dplyr::rename(free_chlo_1 = result_1, free_chlo_2 = result_2, free_chlo_3 = result_3,
                 free_chlo_qa_1 = qa_1,free_chlo_qa_2 = qa_2,free_chlo_qa_3 = qa_3)
-sites_chlo <- merge(sites_chlo, df_chlo[df_chlo$AnalyteName == "Chlorine, Total Residual",c(1,7:12)], by.x="station_code", by.y="StationName") %>%
+sites_chlo <- merge(sites_chlo, df_chlo_aggreg[df_chlo_aggreg$AnalyteName == "Chlorine, Total Residual",c(1,7:12)], by.x="station_code", by.y="StationName") %>%
   dplyr::rename(tot_chlo_1 = result_1, tot_chlo_2 = result_2,tot_chlo_3 = result_3,  
                 tot_chlo_qa_1 = qa_1,tot_chlo_qa_2 = qa_2,tot_chlo_qa_3 = qa_3)
 sites_chlo <- sites_chlo %>% 
   dplyr::mutate(year=year(date_1))
+
+df_chlo <- df_chlo %>% 
+  dplyr::left_join(select(sites_chlo, "station_code", "long", "lat", "ws", "subws", "creek"), 
+                   by=c("StationName"= "station_code"))
 
 # variables used in ui 
 chlo_vars_yr <- seq(min(sites_chlo$year), max(sites_chlo$year))

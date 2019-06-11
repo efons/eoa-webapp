@@ -12,9 +12,8 @@ server <- (function(input, output, session) {
 
   
   
-# Bioassessment #################################################################################################################################        
+## Bioassessment #################################################################################################################################        
 #################################################################################################################################################
-  
   
 # Explanatory pop-up windows: bioassessments, scores ##########################
   
@@ -166,13 +165,27 @@ server <- (function(input, output, session) {
   })
   
   
-
+# RenderUI 
+  output$score_subset <- renderUI({
+    
+    if (length(input$score_dwlnd)>0){
+      choices_score_vis <- input$score_dwlnd
+      names(choices_score_vis) <- bio_vars_filter[match(choices_score_vis, bio_vars_filter$param),"name"]
+      
+      radioButtons(
+      inputId = "filter_by",
+      label = NULL,
+      choices = choices_score_vis,
+      selected =  input$score_dwlnd[1])
+    }
+  })
+  outputOptions(output, "score_subset", suspendWhenHidden=F)
   
-# Data subsetting ###########################################################
+  
+  # Data subsetting ###########################################################
   # Reactive function that returns the subsetted data table
   data_sub <- reactive({
-    req(!is.null(input$size_by))
-    
+
     filter_by <- input$filter_by
     threshold1 <-
       bio_vars_filter$threshold1[which(bio_vars_filter$param == filter_by)]
@@ -182,18 +195,12 @@ server <- (function(input, output, session) {
       bio_vars_filter$threshold3[which(bio_vars_filter$param == filter_by)]
     filter_name <-
       as.character(bio_vars_filter$name[which(bio_vars_filter$param == filter_by)])
-    size_by <- input$size_by
-    size_name <- as.character(param_names$fullname[which(param_names$dataname == size_by)])
-    score_2nd <- input$bio_score_2nd
-    score_2nd_name <- as.character(bio_vars_filter$name[which(bio_vars_filter$param == score_2nd)])
     column_names <- c("RMC ID",
                       "Watershed",
                       "Sub-watershed",
                       "Creek",
                       "Year",
-                      filter_name,
-                      size_name, 
-                      score_2nd_name)
+                      filter_name)
     
     data_sub <-
       df_bio %>% dplyr::filter(year >= input$wy[1] & year <= input$wy[2]) %>%
@@ -201,12 +208,10 @@ server <- (function(input, output, session) {
       dplyr::mutate(year = factor(year, levels = seq(
         min(bio_vars_yr), max(bio_vars_yr), 1
       ))) %>%
-      dplyr::select(if(!(score_2nd_name == filter_name)) 
-                           {c("rmc_id", "ws", "subws","creek", "year", filter_by, size_by, score_2nd)}
-                    else {c("rmc_id", "ws", "subws","creek", "year", filter_by, size_by)})  %>%
+      dplyr::select(c("rmc_id", "ws", "subws","creek", "year", filter_by))  %>%
       arrange(desc(year), ws) %T>%
       { 
-        names(.) <- if(!(score_2nd_name == filter_name)){column_names} else {column_names[1:7]}
+        names(.) <- column_names
       }
     
     
@@ -216,34 +221,12 @@ server <- (function(input, output, session) {
 
 
   
-# Data download tool #######################################################  
-  # create shapefile for download 
-  bio_shp <- reactive({
-    data <- data_sub() %>% 
-      dplyr::select(1:7) %T>% 
-    {names(.) <- c("rmc_id", "ws", "subws", "creek", "year", input$filter_by, input$size_by)} %>% 
-      dplyr::arrange(rmc_id)
-  
-    sites_slct <- data$rmc_id
-    sites_sub <- sites %>% 
-      dplyr::select(2:7) %>% 
-      dplyr::filter(rmc_id %in% sites_slct) %>% 
-      dplyr::arrange(rmc_id) 
-    
-    xyPoints <- merge(sites_sub,data)
-    SHP <- SpatialPointsDataFrame(coords= xyPoints[,5:6], data =  xyPoints)
-    proj4string(SHP) <- CRS("+init=epsg:4326")
-    
-    return(SHP)
-
-  })
-  
+  # Data download tool #######################################################  
   # Create data table for download
   bio_table_dwld <- reactive({
     score_slct <- which(colnames(df_bio) %in% input$score_dwlnd)
-    col_slct <- c(1, 41:43,4, 37:38, score_slct,15:36, 39:40, 44:46)
-    col_names <- c("RMC ID", "Watershed","Sub-Watershed","Creek","Sampling Date", "Latitude", "Longitude",
-                   as.character(param_names[match(colnames(df_bio[,col_slct[8:length(col_slct)]]),param_names$dataname),"fullname"]))
+    col_slct <- as.character(param_names$dataname)
+    col_names <- as.character(param_names$fullname)
     
     data_sub <-
       df_bio %>% dplyr::filter(year >= input$wy[1] & year <= input$wy[2]) %>%
@@ -252,11 +235,32 @@ server <- (function(input, output, session) {
       dplyr::mutate(year = factor(year, levels = seq(
         min(bio_vars_yr), max(bio_vars_yr), 1
       ))) %>%
-      dplyr::select(col_slct) %T>%
-      {names(.) <- col_names}
+      dplyr::select("rmc_id","wb_id",col_slct[c(1:5, 8:47)]) %>% 
+      dplyr::arrange(desc(sample_date)) %T>% 
+      {names(.) <- c("RMC Station ID","Water Board ID",col_names[c(1:5, 8:47)])} 
     
     return(data_sub)
   })
+  
+    # create shapefile for download 
+  bio_shp <- reactive({
+    
+    col_slct <- as.character(param_names$dataname)
+    xyPoints <- bio_table_dwld()  %T>% 
+    {names(.) <- c("rmc_id","wb_id",col_slct[c(1:5, 8:47)])} %>% 
+      dplyr::filter(!is.na(long)) %>%
+      dplyr::mutate(long=as.numeric(long), lat=as.numeric(lat)) %>% 
+      dplyr::arrange(rmc_id)
+ 
+    
+    SHP <- SpatialPointsDataFrame(coords= xyPoints[,c(7,6)], data =  xyPoints)
+    proj4string(SHP) <- CRS("+init=epsg:4326")
+    
+    return(SHP)
+
+  })
+  
+
   
   # Download user selected file type of selected dataset 
   output$downloadData <- downloadHandler(
@@ -294,7 +298,7 @@ server <- (function(input, output, session) {
   })
   
 
-# Score overview: Map + barplot ###########################################
+  # Score overview: Map + barplot + boxplot ###########################################
   
   # MAP
   output$map_title <- renderText({
@@ -344,8 +348,7 @@ server <- (function(input, output, session) {
       bio_vars_filter$threshold3[which(bio_vars_filter$param == filter_by)]
     filter_name <-
       bio_vars_filter$name[which(bio_vars_filter$param == filter_by)]
-    size_by <- input$size_by
-    
+
     # subset data based on user input
     data_sub <-
       df_bio %>% filter(year >= input$wy[1] & year <= input$wy[2]) %>%
@@ -353,11 +356,8 @@ server <- (function(input, output, session) {
     data_sub <-
       cbind(data_sub, data_sub[, which(colnames(data_sub) == filter_by)])
     colnames(data_sub)[ncol(data_sub)] <- "filter"
-    if (!(size_by == "none")) {
-      data_sub <-
-        cbind(data_sub, data_sub[, which(colnames(data_sub) == size_by)])
-      colnames(data_sub)[ncol(data_sub)] <- "size"
-    }
+      
+    
     
     # subset watersheds shapefile based on user input
     sheds_sub <- sheds[sheds$SYSTEM %in% input$ws, ]
@@ -378,7 +378,6 @@ server <- (function(input, output, session) {
     )
     
     # Customize color and size of circle markers
-    
     getColor <- function() {
       ifelse(
         is.na(data_sub$filter),"white",
@@ -459,7 +458,6 @@ server <- (function(input, output, session) {
   
 
   # Summary barplot 
-  
   output$barplot_title <- renderText({
     filter_name <-
       bio_vars_filter$name[which(bio_vars_filter$param == input$filter_by)]
@@ -509,121 +507,45 @@ server <- (function(input, output, session) {
             legend.position = "top", legend.box="vertical", legend.title = element_blank(), 
             text = element_text(size=12)) 
     
-    
     return(p)
-
-  
   })
   
-
   
-
-# Score vs. stressor ######################################################
-  
-  # List of selected watersheds
-  ws_list <- reactive({
-    ifelse(
-      length(input$ws) < length(unique(bio_vars_ws)),
-      paste(
-        "Selected watersheds: ",
-        paste(input$ws, collapse = ", "),
-        sep = ""
-      ),
-      "All watersheds"
+  # summary boxplot 
+  output$boxplot_title <- renderText({
+    filter_name <-
+      bio_vars_filter$name[which(bio_vars_filter$param == input$filter_by)]
+    paste(
+      "Boxplot of ",
+      filter_name,
+      "for ",
+      input$wy[1],
+      " - ",
+      input$wy[2]
     )
-  })
-  
-  output$ws_list_2 <- renderText({
-    ws_list()
-  })
-  
-  
-  # Scatter Plots: indicator vs. stressor variable
-  output$scatterplots <- renderText({
-      paste("Scatterplots for ", input$wy[1], " - ", input$wy[2], sep =
-              "")
-  })
-  
-  output$cond_scatter <- renderUI({
-    if (nrow(data_sub()) <= 1 ||
-        sum(!is.na(data_sub()[, (ncol(data_sub())-1)])) <= 1 ||
-        sum(!is.na(data_sub()[, (ncol(data_sub())-2)])) <= 1 ) {
-      h5(
-        "No data to show: Make sure you selected a stressor variable and there are at least two assessment events for the selected time period/watersheds"
-      )
-    }
-    else {
-      plotOutput("scatter1")
-    }
-  })
-  
-  output$scatter1 <- renderPlot({
-    data_sub_plots <- as.data.frame(data_sub())
-    x_var <- data_sub_plots[, 7]
-    y_var <- data_sub_plots[, 6]
-    p <- ggplotRegression(y=y_var,x= x_var) +
-      xlab(colnames(data_sub_plots)[7]) + ylab(colnames(data_sub_plots)[6]) + 
-      theme(text=element_text(size=12))
-    return(p)
-  })
-  
-  # Scatterplots pop-up help window 
-  observeEvent(input$interpret_scatter,{
-    showModal(modalDialog(
-      title = "Scatterplot coefficients",
-      HTML("<p><b>Pearson</b>'s correlation test assesses the strength of the <i>linear relationship</i>
-              between two variables (assumed to be normally distributed). 
-              Both R-squared and p-value can take values between 0 and 1. The closer R-squared is to 1, the stronger the relationship. 
-              The relationship is generally considered to be significant if p-value is below the significance level (e.g. 0.05). </p>
-            </br>
-            <p><b>Spearman</b>'s correlation test assesses the strength of the <i>monotonic relationship</i> (i.e. either decreasing or increasing, 
-              but not necessarily linear) between the two variables, regardless of their distribution (non-parametric test). 
-              Spearman's Rho can take values between +1 and -1. Values of +1 or -1 indicate a strong monotonic relationship, whether the variables are
-              negatively (-) or positively (+) correlated. p-values below 0.05 are generally considered significant.</p>"),
-      easyClose = TRUE, footer=modalButton("Got it!")
-    ))
-  })
-  
-  
-  
-  # Boxplots 
-  output$boxplots <- renderText({
-      paste("Boxplots for ", input$wy[1], " - ", input$wy[2], sep =
-              "")
-  })
-  output$cond_boxplot <- renderUI({
-    if (nrow(data_sub()) == 0)
-    {
-      h5(
-        "No data to show (no samples for this watershed/time period OR no parameter selected in map parameters)"
-      )
-    }
-    else {
-      plotOutput("boxplot")
-    }
-  })
+  })  
   
   bio_boxplot <- function(data_sub_plots,
-                          var_nb = 8,
                           threshold = -1) {
-    if (nrow(data_sub_plots) > 0) {
-      x_var <- data_sub_plots[,2]
+    data_sub <- data_sub()
+
+      x_var <- data_sub[,2]
       x_var_name <- "Watersheds"
-      if (length(unique(x_var))==1) {x_var <- data_sub_plots[,3]
+      if (length(unique(x_var))==1) {x_var <- data_sub[,3]
       x_var_name="Subwatersheds"}
       
-      y_var <- data_sub_plots[, var_nb]
+      y_var <- data_sub[, 6]
       df_tempo <- data.frame(x_var = x_var, y_var = y_var)
       p <-
         ggplot(df_tempo, aes(x = x_var, y = y_var)) + geom_boxplot(col = rgb(0, 0, 1, 0.6)) +
-        xlab(x_var_name) + ylab(colnames(data_sub_plots[var_nb])) +
+        xlab(x_var_name) + ylab(colnames(data_sub[6])) +
         stat_summary(
           fun.data = give_tot,
           geom = "text",
           fun.y = median,
           position = position_dodge(width = 0.75)
         ) + 
-       theme(axis.text.x = element_text(angle = 35, hjust = 1, size=12))
+        theme(axis.text.x = element_text(angle = 35, hjust = 1, size=12))
       
       if (threshold >= 0) {
         p <-
@@ -632,84 +554,29 @@ server <- (function(input, output, session) {
                          col = "seagreen")
       }
       return(p + theme(text=element_text(size=12)))
-    }
-    else
-      return(NULL)
+    
+
   }
   
-  output$boxplot <- renderPlot({
+  output$bio_boxplot <- renderPlot({
     data_sub_plots <- as.data.frame(data_sub())
     threshold <-
       bio_vars_filter[match(colnames(data_sub_plots[6]), bio_vars_filter$name), "threshold1"]
     return(bio_boxplot(
       data_sub_plots = data_sub_plots,
-      var_nb = 6,
       threshold = threshold
     ))
   })
-  output$boxplot2 <- renderPlot({
-    data_sub_plots <- as.data.frame(data_sub())
-      return(bio_boxplot(data_sub_plots = data_sub_plots, var_nb = 7))
-    
-  })
-  
-  # Detailed datatable score + stressor 
-  output$score_table <- renderText({
-   paste("Score table for ", input$wy[1], " - ", input$wy[2])
-  })
-  output$score_stressor_table <- DT::renderDataTable({
-    t <- data_sub()
-    
-    name_score <- colnames(t)[6]
-    name_stressor <- colnames(t)[7]
-    
-    intervals <- bio_vars_filter[bio_vars_filter$name == name_score,4:6]
-    
-    return(datatable(t[1:7])%>%
-             formatStyle(
-               name_score,
-               color = styleInterval(intervals, c("white","black", "black", "black")),
-               backgroundColor = styleInterval(intervals, colors_bio[c(4,3,2,1)])) %>% 
-             formatRound(columns=c(name_score,name_stressor), digits=3))
-    
-    
-  })
   
 
-# Score vs. second score #################################################
+  
+  
+  
 
-  # Scatterplots: Score Comparisons
-  output$bio_score_comp <- renderPlot({
-  data_sub_plots <- as.data.frame(data_sub())
-  p<- NULL
+## POC data ############################################################################################################################
+############################################################################################################################
   
-  if(nrow(data_sub_plots)>=2){
-   if ( ncol(data_sub_plots)== 8){
-  y_var <- data_sub_plots[, 8]
-  x_var <- data_sub_plots[, 6]
-  p <- ggplotRegression(y=y_var,x= x_var) +
-    xlab(colnames(data_sub_plots)[8]) + ylab(colnames(data_sub_plots)[6])}
-  else { 
-  y_var <- data_sub_plots[, 6]
-  x_var <- data_sub_plots[, 6]
-  p <- ggplotRegression(y=y_var,x= x_var) +
-    xlab(colnames(data_sub_plots)[6]) + ylab(colnames(data_sub_plots)[6])} 
-  }
-  
-  return(p + 
-           theme(text=element_text(size=12))
-  )
-})
-  
-  
-  
-  
-  
-  ## POC data
-  ############################################################################################################################
-
-  # Plot for POC
-  
+  # Data Subsetting POC #####
   data_sub_poc <- reactive({
     poc_contaminant <- input$poc_contaminant
     sites_POC <- df_POC %>%  dplyr::filter(year >= input$poc_yr[1] & year <= input$poc_yr[2])
@@ -719,7 +586,7 @@ server <- (function(input, output, session) {
     else {sites_POC <- sites_POC %>% mutate(selected_cont= pcbs_mg_kg)}
   })
   
-  
+  # Summary Plot POC #####
   barplot_poc <- reactive({
     data_sub_poc <- data_sub_poc()
     
@@ -767,7 +634,7 @@ server <- (function(input, output, session) {
     return(p)  
     })
   
-  # MAP for POC 
+  # MAP for POC #####
   output$map_poc <- renderLeaflet({
     leaflet() %>% 
       addProviderTiles(providers$Esri.WorldTopoMap) %>% 
@@ -802,9 +669,10 @@ server <- (function(input, output, session) {
       rad
     }
     
+    # fix that 
     getColor_poc <- function(df){
-      if (poc_contaminant == "hg") {col <- df$hg_col}
-      else col <- df$pcb_col
+      if (poc_contaminant == "hg") {col <- unname(colors_Hg)[df$hg_conc_cat]}
+      else col <- unname(colors_PCB)[df$pcb_conc_cat]
       col
     }
     
@@ -812,14 +680,14 @@ server <- (function(input, output, session) {
     colors_poc <- if(poc_contaminant == "hg") {colors_Hg[2:4]} else colors_PCB
     
     leafletProxy("map_poc") %>% clearMarkers() %>% clearShapes() %>% clearControls() %>%
-      addCircleMarkers(lng=sites_poc$long, lat=sites_poc$lat, radius=5, color=getColor_poc(sites_poc), weight=1, popup = content_poc, opacity = 0.7, fillOpacity = 0.5) %>%
+      addCircleMarkers(lng=sites_poc$long, lat=sites_poc$lat, radius=5, color=getColor_poc(sites_poc), weight=1, popup = content_poc, opacity = 0.8, fillOpacity = 0.8) %>%
       addLegend("topright", colors=colors_poc, labels=lab_poc, title="Color Key", layerId="colorLegend")
     
   })
   
 
   
-  # Download data 
+  # Download data ####
   output$downloadData_poc <- downloadHandler(
     
     filename = function() {
@@ -848,24 +716,77 @@ server <- (function(input, output, session) {
   
   
   
-  # Chlorine 
-  ##############################################################################################
+
+## Chlorine  ##################################################################################################
+##############################################################################################
   
-  # data subset 
+  # data subset ####
   data_sub_chlo <- reactive({
-   
     return(sites_chlo %>%  
-      dplyr::filter(watershed %in% input$chlo_ws,
+      dplyr::filter(ws %in% input$chlo_ws,
                     year >= input$chlo_yr[1] & year <= input$chlo_yr[2]))
     
   })
   
   
-  # MAP 
+  # data download chlorine #### 
+  data_chlo_dwld <- reactive({
+    return(df_chlo %>% 
+      dplyr::filter(ws %in% input$chlo_ws, 
+                    year >= input$chlo_yr[1] & year <= input$chlo_yr[2]) %>% 
+     dplyr::select(c(1,13:15,11:12,2:7))) 
+  })
+  
+  chlo_shp <- function() {
+    xyPoints <- data_chlo_dwld() 
+    SHP <- SpatialPointsDataFrame(coords= xyPoints[,c(5,6)], data =  xyPoints)
+    proj4string(SHP) <- CRS("+init=epsg:4326")
+    return(SHP)
+  }
+  
+
+  output$downloadData_chlo <- downloadHandler(
+    
+    filename = function() {
+      if (!input$file_type_chlo == ".shp")
+        {paste("chlorine", "_table", Sys.Date(), input$file_type_chlo, sep = "")}
+      else {paste0("shpExport.zip")} 
+      
+    },
+
+    content = function(file) {
+      data_to_dwn <- data_chlo_dwld() %T>% 
+      {names(.) <- c("Station Code", "Watershed", "Sub-watershed", "Creek", "Longitude", "Latitude", 
+                     "Date", "Analyte Name", "Field Replicate Number", "Result (mg/L)", "Result Qualitative Code", 
+                     "QA Code")} 
+
+      if(input$file_type_chlo== ".csv") {
+        write.csv(data_to_dwn, file, row.names = FALSE)
+      }
+      if(input$file_type_chlo == ".xlsx") {
+        write.xlsx(data_to_dwn, file)
+      }
+       if (input$file_type_chlo == ".shp"){
+        if (length(Sys.glob("shpExport.*"))>0){
+          file.remove(Sys.glob("shpExport.*"))
+        }
+        writeOGR(chlo_shp(), dsn="shpExport.shp", layer="shpExport", driver="ESRI Shapefile")
+        zip(zipfile='shpExport.zip', files=Sys.glob("shpExport.*"),zip = Sys.getenv("R_ZIPCMD", "zip"))
+        file.copy("shpExport.zip", file)
+        if (length(Sys.glob("shpExport.*"))>0){
+          file.remove(Sys.glob("shpExport.*"))
+        }
+      }
+    }
+    
+  )
+  # summary graphs #### 
   output$map_chlo <- renderLeaflet({
     leaflet() %>% 
       addProviderTiles(providers$Esri.WorldTopoMap) %>% 
-      setView(lng = -122, lat = 37.4, zoom = 10)
+      setView(lng = -122, lat = 37.4, zoom = 10) %>% 
+      addMapPane(name = "polygons", zIndex = 410) %>%
+      addMapPane(name = "markers", zIndex = 420)
   })
   
   # Update map with user inputs 
@@ -874,9 +795,8 @@ server <- (function(input, output, session) {
     # wait for POC menu to be selected 
     req(input$menu_items == "chlorine") 
     
-
     sites_chlo_sub <- data_sub_chlo()
-    
+    sheds_sub <- sheds[sheds$SYSTEM %in% input$chlo_ws, ]
     
     popup_chlo <- paste(
       sep="</br>", 
@@ -898,13 +818,31 @@ server <- (function(input, output, session) {
     
     
     get_color_chlo <- function(var) {
+
       ifelse(var < 0.08, "green",
              ifelse(var <0.1, "orange",
                     "red"))
     }
     
     # with sites df
-    leafletProxy("map_chlo") %>% clearMarkers() %>% clearShapes() %>% clearControls() %>%
+    leafletProxy("map_chlo") %>% clearMarkers() %>% clearShapes() %>% clearControls() 
+    
+    if (nrow(sheds_sub) > 0) {
+      leafletProxy("map_chlo") %>%
+      addPolygons(
+        data = sheds_sub,
+        layerId = sheds_sub$SYSTEM,
+        weight = 1,
+        smoothFactor = 0.5,
+        opacity = 0.6,
+        fill = T,
+        fillOpacity = 0.1,
+        label = sheds_sub$SYSTEM,
+        highlightOptions = highlightOptions(
+          color = "white",
+          weight = 3,
+          bringToFront = TRUE
+        ), options= leafletOptions(pane="polygons")) %>% 
       addCircleMarkers(data=sites_chlo_sub, lat=sites_chlo_sub$lat, lng=sites_chlo_sub$long, 
                        radius=7, 
                        weight=1, color="blue", fillColor=get_color_chlo(sites_chlo_sub$tot_chlo_1), 
@@ -913,25 +851,24 @@ server <- (function(input, output, session) {
                        radius=4, 
                        weight=1, color="blue", fillColor=get_color_chlo(sites_chlo_sub$free_chlo_1), 
                        fillOpacity = 0.9,
-                       popup=popup_chlo)
+                       popup=popup_chlo, options= leafletOptions(pane="markers")) %>% 
+      addLegendCustom(position="topright", shapes=rep("circle",5), size=c(14,rep(10,4)), colors = c(rep("white",2), "green", "orange", "red"),
+                      labels=c("Total Chlorine", "Free Chlorine", "< 0.08 mg/L", "0.08 - 0.1 mg/L", "> 0.1 mg/L"))
 
-    
+    }
   })
   
   
   output$plot_chlo <- renderPlot({
     if (nrow(data_sub_chlo())>0){ 
-    data_sub <- data_sub_chlo()
+    data_sub <- data_sub_chlo() %>% 
+      dplyr::mutate(col=ifelse(tot_chlo_1>0.1, "red", "green"))
     
-    p <- ggplot(data=data_sub, aes(x=tot_chlo_1)) + geom_density(alpha=0.5)+ 
-      xlab("Total Residual (mg/L)") + ylab("Density") + 
-      coord_cartesian(xlim=c(0,0.4))
-    
-    d <- ggplot_build(p)$data[[1]]
-      
-    if (nrow(subset(d,x>0.1))>0){
-           p <- p + geom_area(data = subset(d, x > 0.1), aes(x=x, y=y), fill="red")
-    }
+    p <- ggplot(data=data_sub, aes(x=tot_chlo_1, fill=col)) + geom_bar(width=0.007)+ 
+      xlab("Total Residual Chlorine (mg/L)") + ylab("Number of samples") + 
+      coord_cartesian(expand=F) + 
+      theme(legend.position = "none") + 
+      scale_fill_manual(values=c("red"="red", "green"="seagreen"))
      
     return(p)
     }
@@ -940,7 +877,7 @@ server <- (function(input, output, session) {
   
   
   
-  ## Continuous water quality
+  ## Continuous water quality #### 
   #############################################################################################################################
   
   
