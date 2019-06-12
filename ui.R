@@ -144,9 +144,9 @@
                    downloadButton("downloadData", label = "Data Download", style="background-color: #3c8dbc; border-color: #367fa9; color:white"),                   # Download options
                    radioButtons("file_type", label=NULL, inline = T,
                                     choices = c(".csv", ".xlsx", ".shp")), 
-                   br(),
-                   div(style="font-style:italic",textOutput("bio_dwld_info"))))
-                   ,
+                   br()
+                   )
+               ),
 
 
         
@@ -169,6 +169,7 @@
             #  MAP
                   fluidRow(column(10, offset=1, 
                                   div(style="font-weight:bold",textOutput("map_title")),
+                                  actionLink(inputId= "score_popup", label="Definition"),
                                   br(),
                                  leafletOutput("map_sites"))),
                   br(),
@@ -270,11 +271,11 @@
   tabItem(tabName="con_temp",
           actionLink(inputId="temp_desc",  label="Continuous Temperature Monitoring", style="font-size:160%"),
           br(), 
+          br(), 
           
           # Box for inputs
           fluidRow(
-            box(h4("Data Download:"),
-                width = 4,
+            column(4,box(h4("Data Download:"), width=12,
                 sliderInput(
                   inputId = "temp_dates",
                   label = "Choose years:",
@@ -290,41 +291,48 @@
                   selected = as.character(wq_vars_ws),
                   options = list(`actions-box` = TRUE, size = 20),
                   multiple = T
-                ),
+                ), 
+                radioButtons(inputId="param_type_temp", label="Choose Temperature Parameter:", 
+                             choices=c("Continuous data (/1 hr)"="all", 
+                                       "Daily Average" = "avDayTemp", 
+                                       "Weekly Average" = "avWeekTemp"), 
+                             selected="avDayTemp"),
                 br(), 
                 downloadButton("downloadData_temp", label = "Data Download", style="background-color: #3c8dbc; border-color: #367fa9; color:white"),
                 # Input: Choose file type -
                 radioButtons("file_type_temp", NULL, inline = T,
                              choices = c(".csv", ".xlsx", ".shp"), 
-                             selected=".csv") 
+                             selected=".csv")
   
-            ),
+            )),
             
             #box for summary graphs
-            box(width = 8,
-                selectInput(
-                  inputId = "temp_param",
-                  label = "Parameter:",
-                  choices = c(
-                    "Daily Average" = "avDayTemp",
-                    "Weekly Average" = "avWeek"
-                  ),
-                  selected = "avDayTemp"
-                ),
+            column(8,box(width=12,
+                h4("Overview of data:"),
+                
+                column(2, offset=10,dropdownButton(
+                  tags$h3("Data Visualization filters:"),
+                  # Box for bio score selection
+                  radioButtons(
+                    inputId = "temp_param",
+                    label = "Temperature Parameter:",
+                    choices = c(
+                      "Daily Average" = "avDayTemp",
+                      "Weekly Average" = "avWeek"
+                      ), selected = "avDayTemp"),
+                  circle = TRUE, status = "primary", icon = icon("gear"), width = "300px",
+                  tooltip = tooltipOptions(title = "Click to change temperature parameter"), right=T
+                ), tags$head(tags$style(".leaflet-top {z-index:999!important;}"))),
+                
                 actionLink(inputId="map_temp_desc", label="Map Explanation", icon=NULL),
                 leafletOutput("map_temp"),
           
-          
-          selectInput(
-            inputId = "temp_ws",
-            label = "Watershed:",
-            choices = as.character(wq_vars_ws),
-            selected = as.character(wq_vars_ws[1])
-          ),
+          br(), 
+
           br(),
-          HTML("<i>Hover over the plot and brush to zoom in. Press 'escape' to zoom out.</i>"),
-          plotOutput("temp_timeseries_1", dblclick = "temp_timeseries_1_dbl_click", brush=brushOpts(id="temp_timeseries_1_brush", resetOnNew = T)),
-          plotOutput("temp_timeseries_2")))),
+          HTML("<i>Hover over the plot and brush to zoom in. Double click to zoom out.</i>"),
+          plotlyOutput("temp_timeseries_1")
+          )))),
   
   
 # Pathogens ####################################################################################################
@@ -367,9 +375,8 @@
     actionLink(inputId="chlor_desc",label="Chlorine", style="font-size:160%"),
     br(),
     
-    h4("Under construction"), 
-    
     # Box for inputs 
+    fluidRow(
     column(4,box(width=12, 
                  h4("Data Download:"),
                  sliderInput(inputId="chlo_yr", label="Choose years:", min =min(chlo_vars_yr), max=max(chlo_vars_yr), value=c(min(chlo_vars_yr),max(chlo_vars_yr)), sep="",step=1),
@@ -394,7 +401,7 @@
                     column(10, offset=1,leafletOutput("map_chlo")),
                     br(), 
                     br(), 
-                 column(10, offset=1,plotOutput("plot_chlo", height="400px"))))
+                 column(10, offset=1,plotlyOutput("plot_chlo", height="400px", width="90%"))))) 
     
     
     

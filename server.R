@@ -293,9 +293,6 @@ server <- (function(input, output, session) {
   )
   
   
-  output$bio_dwld_info <- renderText({
-    paste0("Downloading data for the ", input$wy[1],"-", input$wy[2], " period, for ", length(input$ws), " watershed(s)", " and for the following scores: ", paste0(bio_vars_filter[bio_vars_filter$param %in% input$score_dwlnd,"name"], collapse=", "))
-  })
   
 
   # Score overview: Map + barplot + boxplot ###########################################
@@ -809,13 +806,7 @@ server <- (function(input, output, session) {
                                                    "</br>", "Free:", sites_chlo_sub$free_chlo_2, "-", "Total:", sites_chlo_sub$tot_chlo_2),""),
       
       ifelse(!is.na(sites_chlo_sub$date_3),paste("<b>Resampled in:</b>", sites_chlo_sub$date_3,
-                                                 "</br>", "Free:", sites_chlo_sub$free_chlo_3, "-", "Total:", sites_chlo_sub$tot_chlo_3),"")
-      
-    )
-    
-    
-    
-    
+                                                 "</br>", "Free:", sites_chlo_sub$free_chlo_3, "-", "Total:", sites_chlo_sub$tot_chlo_3),""))
     
     get_color_chlo <- function(var) {
 
@@ -859,7 +850,7 @@ server <- (function(input, output, session) {
   })
   
   
-  output$plot_chlo <- renderPlot({
+  output$plot_chlo <- renderPlotly({
     if (nrow(data_sub_chlo())>0){ 
     data_sub <- data_sub_chlo() %>% 
       dplyr::mutate(col=ifelse(tot_chlo_1>0.1, "red", "green"))
@@ -870,36 +861,303 @@ server <- (function(input, output, session) {
       theme(legend.position = "none") + 
       scale_fill_manual(values=c("red"="red", "green"="seagreen"))
      
-    return(p)
+    return(ggplotly(p))
     }
   })
   
   
   
+
+ 
+# Continuous Temperature ##################################################################################################
+#################################################################################################################################
   
-  ## Continuous water quality #### 
-  #############################################################################################################################
+  # Explanatory Popup #############
+  observeEvent(input$temp_desc,{
+    showModal(modalDialog(
+      title = "Continuous Monitoring of Dissolved Oxygen, Temperature, Conductance and pH",
+      HTML('San Francisco Bay Area Stormwater Municipal Regional Permit (MRP), Provision C.8. on Water Quality Monitoring, 
+           section (iii): "The Permittees shall monitor temperature of their streams using a digital temperature logger or equivalent [...]
+            at 60-minute intervals from April through September"
+           <br/>
+           <br/>
+           Exceedances of temperature parameters are based upon the following thresholds: 
+          "The temperature trigger is defined as when two or more weekly average temperatures exceed the Maximum Weekly Average
+           Temperature of 17.0 C for a Steelhead stream, or when 20% of the results at one sampling station exceed the instantaneous maximum of 24.0 C."')
+      ,
+      
+      easyClose = TRUE, footer=modalButton("Got it!")
+      ))
+  })
+  
+  observeEvent(input$map_temp_desc,{
+    showModal(modalDialog(
+      title = "Temperature Map",
+      HTML("For the purpose of this map, the temperature color scale corresponds to the average of all the temperature data points over the selected time period. This color scale is only a <i>relative</i> scale, 
+           it does not indicate water quality objective exceedances. Rather, it's a simplified way to compare sites with one another."),
+      easyClose = TRUE, footer=modalButton("Got it!")
+    ))
+  })
+  
+  # Subset ##### 
+  temp_subset <- reactive({ 
+    filter_dates <- as.Date(cut(as.POSIXct(input$temp_dates,tz=''),"month"))
+    
+    if (input$temp_param == "avDayTemp") {
+      data_sub_temp <- df_temp_7DAVG %>% 
+        as.data.frame() %>% 
+        dplyr::filter(as.Date(date) - as.Date(filter_dates[1])>= 0 & 
+                        as.Date(date) - as.Date(filter_dates[2])<= 0, 
+                      ws %in% input$temp_ws_dwld) %>% 
+        dplyr::mutate(subws_u = paste0(ws, " Watershed\n(",creek,")")) %>% 
+        dplyr::mutate(subws_u = factor(subws_u))
+    }
+    if (input$temp_param == "avWeek") {
+      data_sub_temp <- df_temp_MWAT %>% 
+        as.data.frame() %>% 
+        dplyr::arrange(ws) %>%
+        dplyr::filter(as.Date(day1week) - as.Date(filter_dates[1])>= 0 & 
+                        as.Date(day1week) - as.Date(filter_dates[2])<= 0)%>% 
+        dplyr::mutate(subws_u = paste0(ws, " Watershed\n(",creek,")")) %>% 
+        dplyr::mutate(subws_u = factor(subws_u))
+    }  
+    return(data_sub_temp)
+  })
+  
+  # Download data ####
+  output$downloadData_temp <- downloadHandler(
+    
+    filename = function() {
+      paste(input$param_type_temp, "_table", Sys.Date(), input$file_type_temp, sep = "")
+    },
+    
+    content = function(file) {
+      
+      
+      data_to_dwn <- temp_subset() %>% 
+        dplyr::select(c(5,6,7,2,4,1,8,9)) %T>% 
+        {names(.) <- c("Site ID", "Latitude","Longitude","Watershed", "Creek", "Year", "Date", "Mean Daily Temperature (Celsius)")}
+      
+      
+      if(input$file_type_temp== ".csv") {
+        write.csv(data_to_dwn, file, row.names = FALSE)
+      } else if(input$file_type_temp == ".xlsx") {
+        write.xlsx(data_to_dwn, file)
+      }
+    }
+    
+  )
+  # Map ###########
+  output$map_temp <-  renderLeaflet({
+    leaflet() %>%
+      addProviderTiles(providers$Esri.WorldTopoMap) %>%
+      setView(lng = -122,
+              lat = 37.3,
+              zoom = 9) %>%
+      addMapPane(name = "polygons", zIndex = 410) %>%
+      addMapPane(name = "markers", zIndex = 420) %>% 
+      addLegend("topright", title= NULL, colors=colors_temp[c(1,3,5,7,9,11)], labels=c("Colder",rep("",4),"Warmer"))
+  })
+  
+  # update based on user input
+  observe({
+    req(input$menu_items == "con_temp")
+    
+    filter_dates <- as.Date(cut(as.POSIXct(input$temp_dates,tz=''),"month"))
+    
+    sites_cWQ_maptemp <- sites_cWQ %>%
+      dplyr::filter(ctemp_TF == T) 
+    
+    popup_temp <- paste(
+      sep = "<br/>",
+      "<b>Site:</b>",
+      sites_cWQ_maptemp$site_id,
+      "<b>Watershed:</b>",
+      sites_cWQ_maptemp$ws
+    )
+    
+    get_color_temp <- function(site_id) {
+        if (input$temp_param == "avDayTemp") {
+     
+          df_sub <- df_temp_7DAVG %>%
+            dplyr::filter(as.Date(date) - as.Date(filter_dates[1])>= 0 & 
+                            as.Date(date) - as.Date(filter_dates[2])<= 0)
+          
+          temp_cat <- sapply(site_id,
+                              function(x)
+                                (mean(df_sub$avDayTemp[which(df_sub$site_id == x)])-13)/(21-13))
+
+          return(colors_temp[signif(temp_cat, 1) * 10 + 1])
+        }
+        if (input$temp_param == "avWeek") {
+   
+          df_sub <- df_temp_MWAT %>%
+            filter(as.Date(day1week) - as.Date(filter_dates[1])>= 0 & 
+                     as.Date(day1week) - as.Date(filter_dates[2])<= 0)
+          
+          temp_cat <- sapply(sites_cWQ$site_id,
+                              function(x)
+                                (mean(df_sub$avWeek[which(df_sub$site_id == x)])-13)/(21-13))
+
+          
+          return(colors_temp[signif(temp_cat, 1) * 10 + 1])
+        
+      }
+      
+      else return("black")
+      
+     
+    }
+    
+    
+    
+    #shapes: 15 = square, 16= circle, 17 = triangle
+    leafletProxy("map_temp")  %>% clearMarkers() %>% clearShapes() %>%
+      addPolygons(
+        data = sheds,
+        layerId = sheds$SYSTEM,
+        smoothFactor = 0.5,
+        opacity = 0.6,
+        weight=2, 
+        fill = T,
+        fillOpacity = 0.1,
+        label = sheds$SYSTEM,
+        highlightOptions = highlightOptions(
+          color = "white",
+          weight = 3,
+          bringToFront = TRUE
+        ),
+        options = leafletOptions(pane = "polygons")
+      ) %>%
+      #addCustomMarkers(data= sites_cWQ, lng=sites_cWQ$long, lat=sites_cWQ$lat,
+      #                size=20, bg = c("blue", "orange","purple"),
+      #               shapes=c(21,22,24), icon_group = sites_cWQ$marker_group,
+      #              popup = popup) %>%
+      addCircleMarkers(
+        data = sites_cWQ_maptemp,
+        lng = sites_cWQ_maptemp$long,
+        lat = sites_cWQ_maptemp$lat,
+        radius = 5,
+        weight = 1,
+        opacity = 0.9,
+        fill = T,
+        fillOpacity = 0.8,
+        fillColor = get_color_temp(sites_cWQ_maptemp$site_id),       
+        popup = popup_temp,
+        options = leafletOptions(pane = "markers")
+      )      #addLegendCustom(position="topright", colors=c("blue","orange","purple"),
+      #               shapes = c("square", "circle", "triangle"),
+      #              labels=c("Continuous WQ", "Continuous Temperature", "Both"),
+      #             sizes=c(10,10,10), borders=rep(2,3))
+      
+      
+  })
   
   
+  
+
+
+  # Timeseries ###############
+  
+
+  time_plot_function <- function(data_sub_temp, param) {
+    if (nrow(data_sub_temp) > 0) {
+      
+      if (param == "avDayTemp") {
+        threshold <-
+          temp_thresholds[temp_thresholds$param == "avDayTemp", "thresh"]
+        
+        p <-
+          ggplot(data = data_sub_temp, aes(x = date, y = avDayTemp)) + geom_line(size=0.2,aes(col =
+                                                                                       site_id, group = grp))  +
+          facet_grid(rows=vars(subws_u)) + 
+          ylab("Average Daily Temperature (\u00B0C)") +
+          xlab("Date") +
+          theme_bw() +
+          geom_hline(yintercept = threshold,
+                     linetype = 2,
+                     col = "red") +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+          coord_cartesian(ylim=c(10,25))
+
+      }
+      if (param == "avWeek") {
+        threshold <-
+          temp_thresholds[temp_thresholds$param == "avWeek", "thresh"]
+        
+        p <-
+          ggplot(data = data_sub_temp, aes(x = day1week, y = avWeek, col=site_id)) + geom_point() + geom_line(size=0.2, aes(col=site_id)) + 
+          scale_shape_manual(values = rep(1:15, 3)) +
+          facet_grid(rows=vars(subws_u)) + 
+          ylab("MWAT (\u00B0C)") + xlab("Date") +
+          geom_hline(yintercept = threshold,
+                     linetype = 2,
+                     col = "red") +
+          theme_bw() +
+          theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
+          coord_cartesian(ylim=c(10,25))
+        
+      }
+      
+      return(p + theme(panel.spacing.y = unit(0.2, "lines"),
+                       legend.position = "none",
+                       plot.margin=unit(c(0,1.5,0,0),"cm"),
+                       axis.title.x = element_blank()))
+     
+    }
+    else {
+      NULL
+    }
+  }
+  
+  output$temp_timeseries_1 <- renderPlotly({
+    filter_dates <- as.Date(cut(as.POSIXct(input$temp_dates,tz=''),"month"))
+    
+    data_sub_temp <- temp_subset() 
+    
+    height_plot <-length(unique(data_sub_temp$subws_u))*200
+    
+    if(nrow(data_sub_temp)>0){
+          ggplotly(p=time_plot_function(data_sub_temp = data_sub_temp, param = input$temp_param) + 
+             scale_x_date(
+               date_breaks = "3 months",
+               labels = date_format("%b-%Y"),
+               date_minor_breaks = "1 month",
+               limits = filter_dates,
+               expand = c(0, 0) 
+             ), height=height_plot)
+    } else {NULL}
+
+    
+  })
+  
+
+  
+  ##### 
+  
+## Continuous water quality #### 
+#############################################################################################################################
+  
+  # explanatory popup ##############
   observeEvent(input$wq_desc,{
     showModal(modalDialog(
       title = "Continuous Monitoring of Dissolved Oxygen, Temperature, Conductance and pH",
       HTML('San Francisco Bay Area Stormwater Municipal Regional Permit (MRP), Provision C.8. on Water Quality Monitoring, 
-      section C.8.d.(iv): "The Permittees shall monitor general water quality parameters of streams using a water quality sonde or equivalent.
-      Parameters shall include dissolved oxygen (mg/L and % saturation), pH, specific conductance (uS), and temperature (C)."
-      <br/>
-      <br/>
-      Exceedances of these water quality parameters are based upon the following thresholds: 
-      <ul> <li>"Maximum Weekly Average Temperature exceeds 17.0 C for a 
-      Steelhead stream, or 20 percent of the instantaneous results exceed 24C...;</li>
-      <li> 20 percent of instantaneous pH results are < 6.5 or > 8.5...; </li>
-      <li> 20 percent of the instantaneous specific conductance results are > 2000 uS, or there is a spike in readings with no obvious natural explanation...;</li>
-      <li> or 20 percent of instantaneous dissolved oxygen results are < 7 mg/L in a cold water fishery stream."</li></ul>'
-        )
-     ,
+           section C.8.d.(iv): "The Permittees shall monitor general water quality parameters of streams using a water quality sonde or equivalent.
+           Parameters shall include dissolved oxygen (mg/L and % saturation), pH, specific conductance (uS), and temperature (C)."
+           <br/>
+           <br/>
+           Exceedances of these water quality parameters are based upon the following thresholds: 
+           <ul> <li>"Maximum Weekly Average Temperature exceeds 17.0 C for a 
+           Steelhead stream, or 20 percent of the instantaneous results exceed 24C...;</li>
+           <li> 20 percent of instantaneous pH results are < 6.5 or > 8.5...; </li>
+           <li> 20 percent of the instantaneous specific conductance results are > 2000 uS, or there is a spike in readings with no obvious natural explanation...;</li>
+           <li> or 20 percent of instantaneous dissolved oxygen results are < 7 mg/L in a cold water fishery stream."</li></ul>'
+      )
+      ,
       
       easyClose = TRUE, footer=modalButton("Got it!")
-    ))
+      ))
   })
   
   wq_data_sub <- function (filter_dates, param_slct, season_slct, ws_slct) {
@@ -910,7 +1168,7 @@ server <- (function(input, output, session) {
           as.Date(date) - as.Date(filter_dates[2])<= 0,
         if (!ws_slct == "all"){ws %in% ws_slct} else ({ws %in% wq_vars_ws}) ) %>% 
       dplyr::filter(if(season_slct == "S_F") {season %in% c("S","F")} else season %in% season_slct )
- 
+    
     data_sub_wq <-
       cbind(data_sub_wq, data_sub_wq[, which(colnames(data_sub_wq) == param_slct)])
     
@@ -924,7 +1182,7 @@ server <- (function(input, output, session) {
   
   
   wq_data_sub_map <- reactive({
- 
+    
     wq_data_sub(filter_dates = as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month")),
                 param_slct = input$wq_param,
                 season_slct= input$wq_season,
@@ -933,7 +1191,7 @@ server <- (function(input, output, session) {
   
   
   wq_data_sub_plots <- reactive({
-
+    
     
     wq_data_sub(filter_dates=as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month")),
                 param_slct=input$wq_param,
@@ -954,9 +1212,9 @@ server <- (function(input, output, session) {
       addMapPane(name = "polygons", zIndex = 410) %>%
       addMapPane(name = "markers", zIndex = 420) %>% 
       addLegend("topright", title="% WQS exceedance", colors=colors_wq, labels=c("0","0-10", "10-20", "20-30",
-                                                       "30-40", "40-50", "50-60",
-                                                       "60-70", "70-80", "80-90",
-                                                       "90-100"))
+                                                                                 "30-40", "40-50", "50-60",
+                                                                                 "60-70", "70-80", "80-90",
+                                                                                 "90-100"))
   })
   
   # update based on user input
@@ -966,7 +1224,7 @@ server <- (function(input, output, session) {
     sites_cWQ_mapWQ <- sites_cWQ %>% 
       dplyr::filter(wq_TF == T)
     
-  # % exceedances
+    # % exceedances
     data_sub_wq <- wq_data_sub_map()
     threshold <-
       MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_sup']
@@ -990,9 +1248,9 @@ server <- (function(input, output, session) {
     )
     
     get_color_wq <- function() {
-     
-        return(colors_wq[signif(color_cat,1)*10+1])
-     
+      
+      return(colors_wq[signif(color_cat,1)*10+1])
+      
     }
     
     
@@ -1041,12 +1299,12 @@ server <- (function(input, output, session) {
         popup = popup,
         options = leafletOptions(pane = "markers")
       ) 
-      #addLegendCustom(position="topright", colors=c("blue","orange","purple"),
-      #               shapes = c("square", "circle", "triangle"),
-      #              labels=c("Continuous WQ", "Continuous Temperature", "Both"),
-      #             sizes=c(10,10,10), borders=rep(2,3))
-      
-      
+    #addLegendCustom(position="topright", colors=c("blue","orange","purple"),
+    #               shapes = c("square", "circle", "triangle"),
+    #              labels=c("Continuous WQ", "Continuous Temperature", "Both"),
+    #             sizes=c(10,10,10), borders=rep(2,3))
+    
+    
   })
   
   
@@ -1085,7 +1343,7 @@ server <- (function(input, output, session) {
               col = "red",
               lwd = 1
             ) +
-        
+            
             geom_hline(
               yintercept = threshold_inf,
               lty = 2,
@@ -1106,7 +1364,7 @@ server <- (function(input, output, session) {
       } else
         return(NULL)
     }
-
+  
   
   
   output$wq_boxplot_1 <- renderPlot({
@@ -1163,297 +1421,6 @@ server <- (function(input, output, session) {
         x_param = "year"
       )
     )
-  })
-  
-  
- 
-# Continuous Temperature 
-#################################################################################################################################
-  
-  observeEvent(input$temp_desc,{
-    showModal(modalDialog(
-      title = "Continuous Monitoring of Dissolved Oxygen, Temperature, Conductance and pH",
-      HTML('San Francisco Bay Area Stormwater Municipal Regional Permit (MRP), Provision C.8. on Water Quality Monitoring, 
-           section (iii): "The Permittees shall monitor temperature of their streams using a digital temperature logger or equivalent [...]
-            at 60-minute intervals from April through September"
-           <br/>
-           <br/>
-           Exceedances of temperature parameters are based upon the following thresholds: 
-          "The temperature trigger is defined as when two or more weekly average temperatures exceed the Maximum Weekly Average
-           Temperature of 17.0 C for a Steelhead stream, or when 20% of the results at one sampling station exceed the instantaneous maximum of 24.0 C."')
-      ,
-      
-      easyClose = TRUE, footer=modalButton("Got it!")
-      ))
-  })
-  
-  observeEvent(input$map_temp_desc,{
-    showModal(modalDialog(
-      title = "Temperature Map",
-      HTML("For the purpose of this map, the temperature color scale corresponds to the average of all the temperature data points over the selected time period. This color scale is only a <i>relative</i> scale, 
-           it does not indicate water quality objective exceedances. Rather, it's a simplified way to compare sites with one another."),
-      easyClose = TRUE, footer=modalButton("Got it!")
-    ))
-  })
-  
-  # update inputs - sub-watersheds - sites
-  
-  output$map_temp <-  renderLeaflet({
-    leaflet() %>%
-      addProviderTiles(providers$Esri.WorldTopoMap) %>%
-      setView(lng = -122,
-              lat = 37.3,
-              zoom = 9) %>%
-      addMapPane(name = "polygons", zIndex = 410) %>%
-      addMapPane(name = "markers", zIndex = 420) %>% 
-      addLegend("topright", title= NULL, colors=colors_temp[c(1,3,5,7,9,11)], labels=c("Colder",rep("",4),"Warmer"))
-  })
-  
-  # update based on user input
-  observe({
-    req(input$menu_items == "con_temp")
-    
-    # get dates
-    filter_dates <- as.Date(cut(as.POSIXct(input$temp_dates,tz=''),"month"))
-    
-    sites_cWQ_maptemp <- sites_cWQ %>%
-      dplyr::filter(ctemp_TF == T)
-    
-    popup_temp <- paste(
-      sep = "<br/>",
-      "<b>Site:</b>",
-      sites_cWQ_maptemp$site_id,
-      "<b>Watershed:</b>",
-      sites_cWQ_maptemp$ws
-    )
-    
-    get_color_temp <- function(site_id) {
-        if (input$temp_param == "avDayTemp") {
-     
-          df_sub <- df_temp_7DAVG %>%
-            dplyr::filter(as.Date(date) - as.Date(filter_dates[1])>= 0 & 
-                            as.Date(date) - as.Date(filter_dates[2])<= 0)
-          
-          temp_cat <- sapply(site_id,
-                              function(x)
-                                (mean(df_sub$avDayTemp[which(df_sub$site_id == x)])-13)/(21-13))
-
-          return(colors_temp[signif(temp_cat, 1) * 10 + 1])
-        }
-        if (input$temp_param == "avWeek") {
-   
-          df_sub <- df_temp_MWAT %>%
-            filter(as.Date(day1week) - as.Date(filter_dates[1])>= 0 & 
-                     as.Date(day1week) - as.Date(filter_dates[2])<= 0)
-          
-          temp_cat <- sapply(sites_cWQ$site_id,
-                              function(x)
-                                (mean(df_sub$avWeek[which(df_sub$site_id == x)])-13)/(21-13))
-
-          
-          return(colors_temp[signif(temp_cat, 1) * 10 + 1])
-        
-      }
-      
-      else return("black")
-      
-     
-    }
-    
-    
-    get_weight_temp <- function() {
-      return(sapply(sheds$SYSTEM, function(x) {
-        if (x == input$temp_ws) {
-          3
-        } else{
-          1
-        }
-      }))
-    }
-    
-    #shapes: 15 = square, 16= circle, 17 = triangle
-    leafletProxy("map_temp")  %>% clearMarkers() %>% clearShapes() %>%
-      addPolygons(
-        data = sheds,
-        layerId = sheds$SYSTEM,
-        weight = get_weight_temp(),
-        smoothFactor = 0.5,
-        opacity = 0.6,
-        fill = T,
-        fillOpacity = 0.1,
-        label = sheds$SYSTEM,
-        highlightOptions = highlightOptions(
-          color = "white",
-          weight = 3,
-          bringToFront = TRUE
-        ),
-        options = leafletOptions(pane = "polygons")
-      ) %>%
-      #addCustomMarkers(data= sites_cWQ, lng=sites_cWQ$long, lat=sites_cWQ$lat,
-      #                size=20, bg = c("blue", "orange","purple"),
-      #               shapes=c(21,22,24), icon_group = sites_cWQ$marker_group,
-      #              popup = popup) %>%
-      addCircleMarkers(
-        data = sites_cWQ_maptemp,
-        lng = sites_cWQ_maptemp$long,
-        lat = sites_cWQ_maptemp$lat,
-        radius = 5,
-        weight = 1,
-        opacity = 0.9,
-        fill = T,
-        fillOpacity = 0.8,
-        fillColor = get_color_temp(sites_cWQ_maptemp$site_id),       
-        popup = popup_temp,
-        options = leafletOptions(pane = "markers")
-      )      #addLegendCustom(position="topright", colors=c("blue","orange","purple"),
-      #               shapes = c("square", "circle", "triangle"),
-      #              labels=c("Continuous WQ", "Continuous Temperature", "Both"),
-      #             sizes=c(10,10,10), borders=rep(2,3))
-      
-      
-  })
-  
-  ranges <- reactiveValues(x=NULL, y=c(0,30))
-  
-  time_plot_function <- function(data_sub_temp, param) {
-    if (nrow(data_sub_temp) > 0) {
-      
-      #if (param== "ConTemp"){
-      # p <- ggplot(data=data_sub_temp, aes(x=date, y=ctemp_c, col=site_id)) + geom_line(size=0.3) + ylim(c(0,30))  + ylab("Temperature (\u00B0C)") + xlab("Date")  + scale_x_datetime(breaks=date_breaks("1 year"), labels=date_format("%b-%y")) +
-      #geom_hline(yintercept = 24, linetype=2, col = "red") +
-      #theme_bw()
-      #}
-      
-      if (param == "avDayTemp") {
-        threshold <-
-          temp_thresholds[temp_thresholds$param == "avDayTemp", "thresh"]
-        
-        p <-
-          ggplot(data = data_sub_temp, aes(x = date, y = avDayTemp)) + geom_line(aes(col =
-                                                                                       site_id, group = grp))  +
-          ylab("Average Daily Temperature (\u00B0C)") +
-          xlab("Date") +
-          theme_bw() +
-          geom_hline(yintercept = threshold,
-                     linetype = 2,
-                     col = "red") +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-          coord_cartesian(xlim=ranges$x, ylim=ranges$y, expand=F)
-        
-      }
-      if (param == "avWeek") {
-        threshold <-
-          temp_thresholds[temp_thresholds$param == "avWeek", "thresh"]
-        
-        p <-
-          ggplot(data = data_sub_temp, aes(x = day1week, y = avWeek, col = site_id)) + geom_point(aes(shape =
-                                                                                                        site_id), size = 2) +
-         ylab("MWAT (\u00B0C)") + xlab("Date") +
-          geom_hline(yintercept = threshold,
-                     linetype = 2,
-                     col = "red") +
-          scale_shape_manual(values = seq(1, 15, 1)) +
-          theme_bw() +
-          theme(axis.text.x = element_text(angle = 45, hjust = 1)) + 
-          coord_cartesian(xlim=ranges$x, ylim=ranges$y, expand=F) 
-      }
-      
-      return(p + 
-               ggtitle(paste("Creeks:", paste(unique(data_sub_temp$creek)))))
-    }
-    else {
-      NULL
-    }
-  }
-  
-  
-  
-  temp_timeseries_1 <- reactive({
-    filter_dates <- as.Date(cut(as.POSIXct(input$temp_dates,tz=''),"month"))
-    
-    
-    if (input$temp_param == "avDayTemp") {
-      data_sub_temp <- df_temp_7DAVG %>%
-        dplyr::filter(as.Date(date) - as.Date(filter_dates[1])>= 0 & 
-                        as.Date(date) - as.Date(filter_dates[2])<= 0,
-                      ws == input$temp_ws,
-                      plot_cat == 1)
-    }
-    if (input$temp_param == "avWeek") {
-      data_sub_temp <- df_temp_MWAT %>%
-        dplyr::filter(as.Date(day1week) - as.Date(filter_dates[1])>= 0 & 
-                        as.Date(day1week) - as.Date(filter_dates[2])<= 0,
-                      ws == input$temp_ws,
-                      plot_cat == 1)
-    }  
-    return(time_plot_function(data_sub_temp = data_sub_temp, param = input$temp_param) + 
-             scale_x_date(
-               date_breaks = "3 months",
-               labels = date_format("%b-%Y"),
-               date_minor_breaks = "1 month",
-               limits = filter_dates,
-               expand = c(0, 0)
-             ))
-    
-  })
-  
-
-  temp_timeseries_2 <- reactive({
-    
-    filter_dates <- as.Date(cut(as.POSIXct(input$temp_dates,tz=''),"month"))
-    
-    if (input$temp_param == "avDayTemp") {
-      data_sub_temp <- df_temp_7DAVG %>%
-        dplyr::filter(as.Date(date) - as.Date(filter_dates[1])>= 0 & 
-                        as.Date(date) - as.Date(filter_dates[2])<= 0,
-                      ws == input$temp_ws,
-                      plot_cat == 2)
-    }
-    if (input$temp_param == "avWeek") {
-      data_sub_temp <- df_temp_MWAT %>%
-        dplyr::filter(as.Date(day1week) - as.Date(filter_dates[1])>= 0 & 
-                        as.Date(day1week) - as.Date(filter_dates[2])<= 0,
-                      ws == input$temp_ws,
-                      plot_cat == 2)
-      
-    }
-    p <-
-      time_plot_function(data_sub_temp = data_sub_temp, param = input$temp_param) + 
-      scale_x_date(
-        date_breaks = "3 months",
-        labels = date_format("%b-%Y"),
-        date_minor_breaks = "1 month",
-        limits = filter_dates,
-        expand = c(0, 0)
-      )
-    
-    return(p )
-  })
-  
-  
-  
-  output$temp_timeseries_1 <- renderPlot({
-    p <- temp_timeseries_1()
-    return(p)
-  })
-  
-  
-  observeEvent(input$temp_timeseries_1_brush,{
-    brush <- input$temp_timeseries_1_brush
-      ranges$x <- c(as.Date(brush$xmin, origin="1970-01-01"), as.Date(brush$xmax, origin="1970-01-01"))
-      ranges$y <- c(brush$ymin, brush$ymax)
-  })
-  
-  observeEvent(input$keyPressed, {
-    ranges$x <- NULL
-    ranges$y <- c(0,30)
-      })
-  
-  
-  
-  output$temp_timeseries_2 <- renderPlot({
-    p <- temp_timeseries_2()
-    return(p)
   })
   
   

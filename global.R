@@ -34,8 +34,7 @@ library(beanplot)
 library(DT)
 library(RColorBrewer)
 library(htmltools)
-library(reshape2)
-
+library(plotly)
 
 
 #  - Import spatial files 
@@ -52,7 +51,7 @@ sheds <- readOGR("./shp/SBC_Sheds_SCC_Only_w_Alameda.shp", GDAL1_integer64_polic
 
 
 # sites info 
-sites <- read_excel("sites master file.xlsx", na=c("", "NA", "#N/A"),sheet="copy_05.2019") %>%
+sites <- read_excel("sites_master_file.xlsx", na=c("", "NA", "#N/A"),sheet="copy_05.2019") %>%
   arrange(rmc_id) %>% 
   dplyr::mutate(id=ifelse(historic=="Historical SCVURPPP", station_code, rmc_id))
 # useful for biodata, chlorine 
@@ -188,7 +187,7 @@ df_wq <- read_excel("data_master_wq_2012_18.xlsx", sheet= "SC WQ ALL") %>%
 df_temp <-  read_excel("data_master_wq_2012_18.xlsx", sheet= "SC ConTemp", col_types=c("text","text", "date", "text")) %>% 
   mutate(year =year(date)) %>% # make factor or ordered num 
   arrange(year) %>% 
-  left_join(dplyr::select(sites, "station_code", "ws", "creek"), by=c("site_id"="station_code")) %>% 
+  left_join(dplyr::select(sites, "station_code", "ws", "subws", "creek", "lat", "long"), by=c("site_id"="station_code")) %>% 
   dplyr::mutate(ctemp_c =as.numeric(ctemp_c))
 
 
@@ -253,9 +252,9 @@ colors_wq <- colorRampPalette(c("blue","green", "orange", "red"))(11)
 # temperature calculations 
 df_temp_MWAT <- df_temp %>%  
 dplyr::mutate(day1week= as.Date(cut(date, "week"))) %>%
-  dplyr::group_by(year,ws, plot_cat,creek, site_id, day1week) %>% dplyr::summarize(avWeek= mean(ctemp_c))
+  dplyr::group_by(year,ws, plot_cat,creek, site_id,lat,long, day1week) %>% dplyr::summarize(avWeek= mean(ctemp_c))
 df_temp_7DAVG <- df_temp %>% mutate(date =as.Date(date)) %>%
-  dplyr::group_by( year,ws, plot_cat,creek, site_id,date) %>% dplyr::summarize(avDayTemp= mean(ctemp_c)) %>% 
+  dplyr::group_by( year,ws, plot_cat,creek, site_id,lat,long,date) %>% dplyr::summarize(avDayTemp= mean(ctemp_c)) %>% 
   mutate(grp=paste(year, site_id,sep=''))
   
   
@@ -268,7 +267,7 @@ df_temp_7DAVG <- df_temp %>% mutate(date =as.Date(date)) %>%
 
 # D - Creek trash data 
 #############################################################################################################################################
-#############################################################################################################################################
+
 
 # Upload data
 
@@ -301,7 +300,7 @@ col_trashCat <-  c(rgb(166,219,160,maxColorValue = 255),
                    rgb(118,42,131,maxColorValue = 255))
 
 
-
+#####
 
 
 # E - Chlorine data 
@@ -355,11 +354,10 @@ df_chlo <- df_chlo %>%
 chlo_vars_yr <- seq(min(sites_chlo$year), max(sites_chlo$year))
 
 
-
+#####
 
 
 # F - Pesticide data
-#############################################################################################################################################
 #############################################################################################################################################
 
 
@@ -459,10 +457,11 @@ tox_vars_stressors_dry <- sort(unique(df_sedPest$AnalyteName))
 colors_chem <- c("blue", "red")
 
 
+##### 
 
 
-# G - Upload pathogen data 
-#############################################################################################################################################
+
+# G - pathogen data 
 #############################################################################################################################################
 
 patho_threshold <- data.frame(Analyte=c("Coliform, Fecal", "Enterococcus", "E. coli"), 
@@ -482,7 +481,7 @@ patho_col <- c("green","red")
 
 
 
-
+##### 
 
 
 # H - Customized functions that will be used in the app 
@@ -592,8 +591,6 @@ shade_curve <- function(data=sites_chlo, zlimit, sign=">", fill = "red", alpha =
     else geom_area(data = subset(data, tot_chlo_1 < zlimit),
                   aes(y=y), fill = fill, color = NA, alpha = alpha)
 }
-
-
 
 
 
