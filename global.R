@@ -175,7 +175,7 @@ names(colors_Hg) <- levels(df_POC$hg_conc_cat)
 df_wq <- read_excel("data_master_wq_2012_18.xlsx", sheet= "SC WQ ALL") %>%
   mutate(year = year(date)) %>%
   mutate(season = factor(ifelse((month(date) == 5 | month(date) == 6 | month(date) == 7), "S", "F"), levels=c("S", "F"))) %>% 
-  left_join(dplyr::select(sites, "station_code", "ws", "creek"), by=c("site_id"="station_code")) %>% 
+  left_join(dplyr::select(sites, "station_code", "ws", "creek", "lat", "long"), by=c("site_id"="station_code")) %>% 
   mutate(temp_c = ifelse(str_detect(comment, "malfunction"), NA, temp_c),
          ph = ifelse(str_detect(comment, "malfunction") | str_detect(comment, "pH"), NA, ph),
          sp_cond_us_cm = ifelse(str_detect(comment, "malfunction") | str_detect(comment, "SpCond"), NA, sp_cond_us_cm),
@@ -212,7 +212,9 @@ wq_vars_date <-
 wq_vars_yr_2 <- as.numeric(unique(year(df_wq$date))) 
 wq_vars_yr <- seq(min(c(wq_vars_yr, wq_vars_yr_2)), max(c(wq_vars_yr, wq_vars_yr_2)),1)
 
-wq_vars_ws <-unique(sites_cWQ$ws)
+wq_vars_ws <-unique(sites_cWQ[sites_cWQ$wq_TF==T, "ws"])
+temp_vars_ws <-unique(sites_cWQ[sites_cWQ$ctemp_TF==T, "ws"])
+
 wq_vars_sub_ws <- unique(sites_cWQ$creek)
 
 # sub-ws groupings 
@@ -592,7 +594,17 @@ shade_curve <- function(data=sites_chlo, zlimit, sign=">", fill = "red", alpha =
                   aes(y=y), fill = fill, color = NA, alpha = alpha)
 }
 
-
+# Loading spinner
+shiny_busy <- function() {
+  # use &nbsp; for some alignment, if needed
+  HTML("&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;", paste0(
+    '<span data-display-if="',
+    '$(&#39;html&#39;).attr(&#39;class&#39;)==&#39;shiny-busy&#39;',
+    '">',
+    '<i class="fa fa-spinner fa-pulse fa-fw" style="color:orange; font-size:30px"></i>',
+    '</span>'
+  ))
+}
 
 
 

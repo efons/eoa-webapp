@@ -195,77 +195,6 @@
         
   
   
-# Continuous Water Quality #################################################################################################################################        
-
-  
-  tabItem(
-    tabName = "con_wq",
-  
-    actionLink(inputId="wq_desc",  label="Seasonal Water Quality Monitoring", style="font-size:160%"),
-    br(), 
-    
-    # Box for inputs
-    fluidRow(
-      box(title="Data Filters",
-        width = 4,
-        sliderInput(
-          inputId = "wq_dates",
-          label = NULL,
-          min = wq_vars_date[1],
-          max = wq_vars_date[2],
-          value = wq_vars_date,
-          timeFormat= "%b %Y"
-        ),
-        
-     
-          selectInput(
-            inputId = "wq_param",
-            label = "Water Quality Parameter:",
-            choices = c(
-              "Temperature" = "temp_c",
-              "pH" = "ph" ,
-              "Specific Conductivity" = "sp_cond_us_cm",
-              "Dissolved Oxygen" = "do_mg_l"
-            ),
-            selected = 'ph'
-          ),
-          selectInput(
-            inputId = "wq_season",
-            label = "Season:",
-            choices = c("Spring" = "S", "Fall" =
-                          "F", 
-                        "Spring and Fall" = "S_F"),
-            selected = "S_F"
-          )
-      ),
-      #box for map
-      box(width = 8, leafletOutput("map_wq"))
-    ),
-    
-    # Box for plots
-    fluidRow(
-      box(
-        width = 12,
-        
-        selectInput(
-          inputId = "wq_ws",
-          label = "Watershed:",
-          choices = as.character(wq_vars_ws),
-          selected = as.character(wq_vars_ws[1])
-        ),
-          fluidRow(
-            column(6, plotOutput("wq_boxplot_1"),
-                   plotOutput("wq_boxplot_2")),
-            
-            column(6, plotOutput("wq_beanplot_1"),
-                   plotOutput("wq_beanplot_2"))
-          )
-        )
-      )
-    )
-  ,
-
-
 # Continuous Temperature ####################################################################################
 
   tabItem(tabName="con_temp",
@@ -287,8 +216,8 @@
                 pickerInput(
                   inputId = "temp_ws_dwld",
                   label = "Choose Watersheds:",
-                  choices = as.character(wq_vars_ws),
-                  selected = as.character(wq_vars_ws),
+                  choices = as.character(temp_vars_ws),
+                  selected = as.character(temp_vars_ws),
                   options = list(`actions-box` = TRUE, size = 20),
                   multiple = T
                 ), 
@@ -301,7 +230,7 @@
                 downloadButton("downloadData_temp", label = "Data Download", style="background-color: #3c8dbc; border-color: #367fa9; color:white"),
                 # Input: Choose file type -
                 radioButtons("file_type_temp", NULL, inline = T,
-                             choices = c(".csv", ".xlsx", ".shp"), 
+                             choices = c(".csv", ".xlsx"), 
                              selected=".csv")
   
             )),
@@ -325,6 +254,8 @@
                 ), tags$head(tags$style(".leaflet-top {z-index:999!important;}"))),
                 
                 actionLink(inputId="map_temp_desc", label="Map Explanation", icon=NULL),
+                br(), 
+                shiny_busy(),
                 leafletOutput("map_temp"),
           
           br(), 
@@ -335,6 +266,86 @@
           )))),
   
   
+# Continuous Water Quality #################################################################################################################################        
+
+  
+  tabItem(
+    tabName = "con_wq",
+  
+    actionLink(inputId="wq_desc",  label="Seasonal Water Quality Monitoring", style="font-size:160%"),
+    br(), 
+    
+    # Box for inputs
+    fluidRow(
+      column(4,box(h4("Data Download:"), width=12, 
+        sliderInput(
+          inputId = "wq_dates",
+          label = "Choose Years:",
+          min = wq_vars_date[1],
+          max = wq_vars_date[2],
+          value = wq_vars_date,
+          timeFormat= "%b %Y"
+        ),
+        
+        pickerInput(
+          inputId = "wq_ws",
+          label = "Choose Watersheds:",
+          choices = wq_vars_ws,
+          selected = wq_vars_ws,
+          options = list(`actions-box` = TRUE, size = 20),
+          multiple = T
+        ), 
+        
+          checkboxGroupInput(
+            inputId = "wq_season",
+            label = "Choose Monitoring Season:",
+            choices = c("Spring" = "S", "Fall" =
+                          "F"),
+            selected = c("S","F")
+          ), 
+        
+        checkboxGroupInput(inputId="param_type_wq", label="Choose Water Quality Parameter:", 
+                     choices=c(
+                       "Temperature" = "temp_c",
+                       "pH" = "ph" ,
+                       "Specific Conductivity" = "sp_cond_us_cm",
+                       "Dissolved Oxygen" = "do_mg_l"
+                     ), 
+                     selected=c("temp_c", "ph", "sp_cond_us_cm", "do_mg_l")),
+        br(), 
+        downloadButton("downloadData_wq", label = "Data Download", style="background-color: #3c8dbc; border-color: #367fa9; color:white"),
+        # Input: Choose file type -
+        radioButtons("file_type_wq", NULL, inline = T,
+                     choices = c(".csv", ".xlsx"), 
+                     selected=".csv")
+      )),
+      
+      #box for map and plots 
+      column(8,box(width=12, h4("Overview of data:"), 
+                   
+                   column(2, offset=10,
+                  dropdownButton(
+                     tags$h3("Data Visualization filters:"),
+                     # Box for bio score selection
+                     uiOutput("wq_param_subset"),
+                     circle = TRUE, status = "primary", icon = icon("gear"), width = "300px",
+                     tooltip = tooltipOptions(title = "Click to change temperature parameter"), right=T
+                   ), tags$head(tags$style(".leaflet-top {z-index:999!important;}"))), 
+        br(), 
+        br(), 
+        div(style="font-size:14; font-weight:bold", "Map"), 
+        leafletOutput("map_wq"),
+        br(), 
+        div(style="font-size:14; font-weight:bold", "Violin Plot"), 
+        plotOutput("violinplot_wq")
+        
+        
+        )
+      )
+    )) 
+  ,
+
+
 # Pathogens ####################################################################################################
   
   
@@ -353,7 +364,7 @@
                          choices = patho_vars_analyte,
                          selected = "E. coli"
                        ),
-                       downloadButton("downloadData_patho", label = "Data"),
+                       downloadButton("downloadData_patho", label = "Data Download", style="background-color: #3c8dbc; border-color: #367fa9; color:white"),
                        # Input: Choose file type --
                        radioButtons("file_type_patho", NULL, inline = T,
                                     choices = c(".csv", ".xlsx")))),
@@ -418,7 +429,7 @@
                        sliderInput(inputId="tox_yr", label="Year",min=min(tox_vars_yr),max=max(tox_vars_yr), value=2018, step=1, sep=""),                     br(),
                        selectInput(inputId="tox_season", label="Season", choices=c("Wet"="W","Dry"= "D"), selected="D"),
                        uiOutput("stressors"),
-                       downloadButton("downloadData_tox", label = "Data"),
+                       downloadButton("downloadData_tox", label = "Data Download", style="background-color: #3c8dbc; border-color: #367fa9; color:white"),
                        # Input: Choose file type -
                        radioButtons("file_type_tox", NULL, inline = T,
                                     choices = c(".csv", ".xlsx")))),
@@ -444,7 +455,7 @@
     column(4,box(width=12, selectInput(inputId="poc_contaminant",label="Contaminant:", choices=c("Mercury"="hg", "PCB"="pcb"), selected = "hg"),
                   sliderInput(inputId="poc_yr", label="Time period", min =min(poc_vars_yr), max=max(poc_vars_yr), value=c(min(poc_vars_yr),max(poc_vars_yr)), sep=""),
                  br(),
-                 downloadButton("downloadData_poc", label = "Data"),
+                 downloadButton("downloadData_poc", label = "Data Download", style="background-color: #3c8dbc; border-color: #367fa9; color:white"),
                  # Input: Choose file type -
                  radioButtons("file_type_poc", NULL, inline = T,
                               choices = c(".csv", ".xlsx")))),

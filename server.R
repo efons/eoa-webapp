@@ -165,7 +165,7 @@ server <- (function(input, output, session) {
   })
   
   
-# RenderUI 
+# RenderUI ##### 
   output$score_subset <- renderUI({
     
     if (length(input$score_dwlnd)>0){
@@ -570,6 +570,7 @@ server <- (function(input, output, session) {
   
   
 
+  
 ## POC data ############################################################################################################################
 ############################################################################################################################
   
@@ -1160,47 +1161,45 @@ server <- (function(input, output, session) {
       ))
   })
   
-  wq_data_sub <- function (filter_dates, param_slct, season_slct, ws_slct) {
+  # Ui update #### 
+  output$wq_param_subset <- renderUI({
     
+    if (length(input$param_type_wq)>0){
+      choices_score_vis <- input$param_type_wq
+      names(choices_score_vis) <- MRP_threshold[match(choices_score_vis, MRP_threshold$param),"label"]
+      
+      radioButtons(
+        inputId = "wq_param",
+        label = "Water Quality Parameter:",
+        choices = choices_score_vis,
+        selected = choices_score_vis[1]
+        )
+    }
+  })
+  outputOptions(output, "wq_param_subset", suspendWhenHidden=F)
+  
+
+  
+  # Data subsetting #### 
+  wq_data_sub <- reactive({
+    
+    param_slct <- input$param_type_wq
+    
+    filter_dates = as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month")) 
     data_sub_wq <- df_wq %>%
+      as.data.frame() %>% 
       dplyr::filter(
         as.Date(date) - as.Date(filter_dates[1])>= 0 & 
           as.Date(date) - as.Date(filter_dates[2])<= 0,
-        if (!ws_slct == "all"){ws %in% ws_slct} else ({ws %in% wq_vars_ws}) ) %>% 
-      dplyr::filter(if(season_slct == "S_F") {season %in% c("S","F")} else season %in% season_slct )
-    
-    data_sub_wq <-
-      cbind(data_sub_wq, data_sub_wq[, which(colnames(data_sub_wq) == param_slct)])
-    
-    parameter_name <-
-      as.character(MRP_threshold[match(param_slct, MRP_threshold$param), 'label'])
-    colnames(data_sub_wq)[ncol(data_sub_wq)] <- parameter_name
-    
-    
+        ws %in% input$wq_ws, 
+        season %in% input$wq_season) %>% 
+    dplyr:: select(c("site_id", "lat", "long", "ws", "creek", "date", param_slct, "comment")) 
+
     return(data_sub_wq)
-  }
+  }) 
   
   
-  wq_data_sub_map <- reactive({
-    
-    wq_data_sub(filter_dates = as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month")),
-                param_slct = input$wq_param,
-                season_slct= input$wq_season,
-                ws_slct="all")
-  })
-  
-  
-  wq_data_sub_plots <- reactive({
-    
-    
-    wq_data_sub(filter_dates=as.Date(cut(as.POSIXct(input$wq_dates,tz=''),"month")),
-                param_slct=input$wq_param,
-                season_slct=input$wq_season, 
-                ws_slct=input$wq_ws)
-  })
-  
-  
-  # update inputs - sub-watersheds - sites
+  # Map ##### 
   
   
   output$map_wq <-  renderLeaflet({
@@ -1210,11 +1209,8 @@ server <- (function(input, output, session) {
               lat = 37.3,
               zoom = 9) %>%
       addMapPane(name = "polygons", zIndex = 410) %>%
-      addMapPane(name = "markers", zIndex = 420) %>% 
-      addLegend("topright", title="% WQS exceedance", colors=colors_wq, labels=c("0","0-10", "10-20", "20-30",
-                                                                                 "30-40", "40-50", "50-60",
-                                                                                 "60-70", "70-80", "80-90",
-                                                                                 "90-100"))
+      addMapPane(name = "markers", zIndex = 420) 
+    
   })
   
   # update based on user input
@@ -1225,16 +1221,18 @@ server <- (function(input, output, session) {
       dplyr::filter(wq_TF == T)
     
     # % exceedances
-    data_sub_wq <- wq_data_sub_map()
+    data_sub_wq <- wq_data_sub() %>% 
+      as.data.frame()
     threshold <-
-      MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_sup']
-    threshold_inf <-  MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_inf']
-    
+      MRP_threshold[match(input$wq_param, MRP_threshold$label), 'value_sup']
+    threshold_inf <-  MRP_threshold[match(input$wq_param, MRP_threshold$label), 'value_inf']
+
+    num_col <- which(colnames(data_sub_wq)==input$wq_param)  
     color_cat <- sapply(sites_cWQ_mapWQ$site_id,
                         function(x) 
-                          (sum(data_sub_wq[which(data_sub_wq$site_id == x),ncol(data_sub_wq)]<threshold_inf |
-                                 data_sub_wq[which(data_sub_wq$site_id == x),ncol(data_sub_wq)]>threshold )/
-                             length(data_sub_wq[which(data_sub_wq$site_id == x),ncol(data_sub_wq)]))
+                          (sum(data_sub_wq[which(data_sub_wq$site_id == x),num_col]<threshold_inf |
+                                 data_sub_wq[which(data_sub_wq$site_id == x),num_col]>threshold )/
+                             nrow(data_sub_wq[which(data_sub_wq$site_id == x),]))
     )
     
     popup <- paste(
@@ -1256,7 +1254,7 @@ server <- (function(input, output, session) {
     
     get_weight <- function() { 
       return(sapply(sheds$SYSTEM, function(x) {
-        if (x == input$wq_ws) {
+        if (x %in% input$wq_ws) {
           3
         } else{
           1
@@ -1310,121 +1308,51 @@ server <- (function(input, output, session) {
   
   
   
-  # Boxplots
+  # Box/violin plot ##### 
+
+  output$violinplot_wq <- renderPlot({
+    data_sub_wq <- wq_data_sub() %>% 
+      dplyr::mutate(creek=factor(creek)) %>% 
+      dplyr::arrange(creek) %>% 
+      dplyr::mutate(site_id=factor(site_id))
+    param_name <- MRP_threshold[match(input$wq_param, MRP_threshold$param), "label"] 
+    
+    p <- ggplot(data=data_sub_wq, aes_string(x="site_id", y= input$wq_param, fill="creek")) +
+      geom_violin(width=1.2) + 
+      geom_boxplot(width=0.15, outlier.shape = NA, col="grey", fill="white") +  
+      theme(legend.position = "top", legend.title = element_blank(),
+            axis.text.x = element_text(angle=45, hjust=1)) + 
+      xlab("Site ID") + ylab(param_name) 
+      
+    return(p)
+  })
   
-  boxplot_function <-
-    function(data_sub_wq,
-             param,
-             x_param = "year",
-             plot_cat = 1) {
-      if (nrow(data_sub_wq) > 0) {
-        data_sub_wq <- data_sub_wq[data_sub_wq$plot_cat == plot_cat, ]
-        if (nrow(data_sub_wq) > 0) {
-          threshold <-
-            MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_sup']
-          threshold_inf <-  MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'value_inf']
-          lim_sup <- MRP_threshold[match(colnames(data_sub_wq)[ncol(data_sub_wq)], MRP_threshold$label), 'lim_sup']
-          df_tempo <-
-            data.frame(x_var = as.factor(data_sub_wq[, which(colnames(data_sub_wq) ==
-                                                               x_param)]),
-                       y_var = data_sub_wq[, which(colnames(data_sub_wq) ==
-                                                     param)]) %>% 
-            dplyr::filter(!is.na(y_var))
-          
-          p <-
-            ggplot(data = df_tempo, aes(x = x_var, y = y_var)) + geom_boxplot(col =
-                                                                                rgb(0, 0, 1, 0.6)) +
-            theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-            xlab(x_param) + ylab(colnames(data_sub_wq)[ncol(data_sub_wq)]) +
-            coord_cartesian(ylim=c(0,lim_sup))+ 
-            geom_hline(
-              yintercept = threshold,
-              lty = 2,
-              col = "red",
-              lwd = 1
-            ) +
-            
-            geom_hline(
-              yintercept = threshold_inf,
-              lty = 2,
-              col = "red",
-              lwd = 1
-            ) + 
-            stat_summary(
-              fun.data = give_tot,
-              geom = "text",
-              fun.y = median,
-              position = position_dodge(width = 1)
-            ) + 
-            ggtitle(paste("Creeks:", paste(unique(data_sub_wq$creek),collapse=",")))
-          
-          return(p)
-        }
-        
-      } else
-        return(NULL)
+  
+  
+  # data dowload #### 
+  output$downloadData_wq <- downloadHandler(
+    
+    filename = function() {
+      paste("wq_table", Sys.Date(), input$file_type_wq, sep = "")
+    },
+    
+    content = function(file) {
+      
+      wq_slct_names <- as.character(MRP_threshold[match(input$param_type_wq, MRP_threshold$param),"label"])
+      data_to_dwn <- wq_data_sub() %T>% 
+      {names(.) <- c("Site ID", "Latitude", "Longitude", "Watershed", "Creek", "Date", wq_slct_names, "Comment")}
+
+      
+      if(input$file_type_wq== ".csv") {
+        write.csv(data_to_dwn, file, row.names = FALSE)
+      } else if(input$file_type_wq == ".xlsx") {
+        write.xlsx(data_to_dwn, file)
+      }
     }
+    
+  )
   
-  
-  
-  output$wq_boxplot_1 <- renderPlot({
-    data_sub_wq <- wq_data_sub_plots()
-    param <- colnames(data_sub_wq)[ncol(data_sub_wq)]
-    return(
-      boxplot_function(
-        data_sub_wq = data_sub_wq,
-        param = param,
-        plot_cat = 1,
-        x_param = "site_id"
-      )
-    )
-  })
-  
-  
-  output$wq_boxplot_2 <- renderPlot({
-    data_sub_wq <- wq_data_sub_plots()
-    param <- colnames(data_sub_wq)[ncol(data_sub_wq)]
-    return(
-      boxplot_function(
-        data_sub_wq = data_sub_wq,
-        param = param,
-        plot_cat = 2,
-        x_param = "site_id"
-      )
-    )
-  })
-  
-  
-  # Beanplots < boxplots now
-  
-  output$wq_beanplot_1 <- renderPlot({
-    data_sub_wq <- wq_data_sub_plots()
-    param <- colnames(data_sub_wq)[ncol(data_sub_wq)]
-    return(
-      boxplot_function(
-        data_sub_wq = data_sub_wq,
-        param = param,
-        plot_cat = 1,
-        x_param = "year"
-      )
-    )
-  })
-  
-  output$wq_beanplot_2 <- renderPlot({
-    data_sub_wq <- wq_data_sub_plots()
-    param <- colnames(data_sub_wq)[ncol(data_sub_wq)]
-    return(
-      boxplot_function(
-        data_sub_wq = data_sub_wq,
-        param = param,
-        plot_cat = 2,
-        x_param = "year"
-      )
-    )
-  })
-  
-  
-  # Creek Trash 
+  # Creek Trash  #### 
   ################################################################################################################################
 
   data_sub_trash <- reactive({
