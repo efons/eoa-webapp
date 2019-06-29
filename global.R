@@ -30,11 +30,12 @@ library(magrittr)
 library(rgdal)
 library(lubridate)
 library(scales)
-library(beanplot)
 library(DT)
 library(RColorBrewer)
 library(htmltools)
 library(plotly)
+library(reshape2)
+library(shinyjs)
 
 
 #  - Import spatial files 
@@ -253,10 +254,10 @@ colors_wq <- colorRampPalette(c("blue","green", "orange", "red"))(11)
 
 # temperature calculations 
 df_temp_MWAT <- df_temp %>%  
-dplyr::mutate(day1week= as.Date(cut(date, "week"))) %>%
-  dplyr::group_by(year,ws, plot_cat,creek, site_id,lat,long, day1week) %>% dplyr::summarize(avWeek= mean(ctemp_c))
-df_temp_7DAVG <- df_temp %>% mutate(date =as.Date(date)) %>%
-  dplyr::group_by( year,ws, plot_cat,creek, site_id,lat,long,date) %>% dplyr::summarize(avDayTemp= mean(ctemp_c)) %>% 
+dplyr::mutate(sample_date= as.Date(cut(date, "week"))) %>%
+  dplyr::group_by(year,ws, plot_cat,creek, site_id,lat,long, sample_date) %>% dplyr::summarize(temp_c= mean(ctemp_c))
+df_temp_7DAVG <- df_temp %>% mutate(sample_date =as.Date(date)) %>%
+  dplyr::group_by( year,ws, plot_cat,creek, site_id,lat,long,sample_date) %>% dplyr::summarize(temp_c= mean(ctemp_c)) %>% 
   mutate(grp=paste(year, site_id,sep=''))
   
   
