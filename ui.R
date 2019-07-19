@@ -34,7 +34,8 @@ ui <- dashboardPage(
         menuSubItem("Temperature", tabName = "temp"),
         menuSubItem("pH", tabName = 'ph'),
         menuSubItem("Dissolved Oxygen", tabName = "do"),
-        menuSubItem("Specific Conductivity", tabName= "sp_cond")),
+        menuSubItem("Specific Conductivity", tabName= "sp_cond"),
+        menuSubItem("Chlorine", tabName= "chlorine")),
       menuItem("Pathogens", tabName = "pathogens", icon=icon("microscope")),
       menuItem(
         "Pollutants of Concern",
@@ -111,7 +112,7 @@ ui <- dashboardPage(
         
         # Box for inputs 
         column(4,
-               box(width=12, height = 650,
+               box(width=12, height = 650, status="primary",
                    h4("Data Download:"),
                    
                    # Filters : years 
@@ -124,8 +125,8 @@ ui <- dashboardPage(
                      value = c(min(bio_vars_yr), max(bio_vars_yr)),
                      sep = ""),
                    checkboxGroupInput("bio_assmnt_type", label=NULL,
-                                      choices=c("Historical Data"="Historical SCVURPPP", 
-                                                "MRP Data"= "SCVURPPP"), 
+                                      choices=c("Pre-MRP Data (2003-09)"="Historical SCVURPPP", 
+                                                "MRP Data (2012-Present)"= "SCVURPPP"), 
                                       selected=c("Historical SCVURPPP","SCVURPPP")), 
                    
                    # Filters : watersheds 
@@ -159,44 +160,46 @@ ui <- dashboardPage(
         
         # Box with all outputs: map, graphs 
         column(8,
-               box(width = 12,
+               box(width = 12, status="primary",
                    h4("Overview of data:"), 
-                   column(4, offset=8,
+                   column(5, offset=7,
                           
                           # Map Options 
-                          uiOutput("bio_score_subset")
+                          uiOutput("bio_score_subset"),
+                          actionLink(inputId= "bio_score_popup", label="Definition")
+                          
                           ),
+                   br(), 
                           
                           #  MAP
-                   column(10, offset=1, 
+                  column(12,  
                           div(style="font-weight:bold",textOutput("map_bio_title")),
-                          br(),
-                          column(4, offset=8,                           
-                                 actionLink(inputId= "bio_score_popup", label="Definition and Legend")
-                                 ),
-                          leafletOutput("map_bio")
-                          ),
+                          leafletOutput("map_bio"),
                    br(),
+                   actionButton("bio_reset_button", "Reset view"),
                    br(), 
-                   column(3,offset=1,actionButton("bio_reset_button", "Reset view")),
-                   br(),
+                   br()
+                   ),
+                 
+
                           
                           
                           # Summary plot 
-                          fluidRow(column(10,offset=1,
-                                   div(style="font-weight:bold",textOutput("bio_barplot_title")),
-                                   br(),
-                                   plotOutput("bio_barplot"))), 
-                          column(3,offset=1,prettyCheckbox(inputId="bio_show_bar_pct", label= "Show as %?")),
-                          fluidRow(column(10, offset=1, 
-                                   div(style="font-weight:bold",textOutput("bio_boxplot_title")),
-                                   br(), 
-                                   plotOutput("bio_boxplot"))
-                                   )
+                  column(12,
+                          div(style="font-weight:bold",textOutput("bio_barplot_title")),
+                          br(),
+                          plotOutput("bio_barplot"), 
+                          prettyCheckbox(inputId="bio_show_bar_pct", label= "Show as %?"),
+                          br(), 
+                          br(), 
+                          div(style="font-weight:bold",textOutput("bio_boxplot_title")),
+                          br(), 
+                          plotOutput("bio_boxplot")
+                                   
                           )
                    )
-               
-        ),
+               )
+      ),
     
     
 
@@ -206,7 +209,7 @@ ui <- dashboardPage(
     # Nutrients ##########################################################################################################
     tabItem(
       tabName = "nutrients",
-      actionLink(inputId="nutrients_desc",label="Nutrients", style="font-size:160%"),
+      actionLink(inputId="nutr_desc",label="Nutrients", style="font-size:160%"),
       br(),
       
       # Box for inputs 
@@ -214,7 +217,7 @@ ui <- dashboardPage(
                    h4("Data Download:"),
                    # Filters : years 
                    sliderInput(
-                     inputId = "nut_wy",
+                     inputId = "nutr_wy",
                      label = "Choose Years:",
                      ticks = T,
                      min = min(bio_vars_yr),
@@ -224,7 +227,7 @@ ui <- dashboardPage(
                    
                    # Filters : watersheds 
                    pickerInput(
-                     inputId = "nut_ws",
+                     inputId = "nutr_ws",
                      label = "Choose Watersheds:",
                      choices = as.character(bio_vars_ws),
                      selected = as.character(bio_vars_ws),
@@ -232,12 +235,12 @@ ui <- dashboardPage(
                      multiple = T),
                    
                    # Filters : Scores 
-                   pickerInput("nut_type_dwlnd", label="Choose Nutrients:",
+                   pickerInput("nutr_type_dwlnd", label="Choose Nutrients:",
                                choices=c('Nitrate'="nitrate_mg_l",
-                                                          "Nitrite"="nitrite_mg_l",
-                                                          "TKN" = "tkn_mg_l",
-                                                          "Total Nitrogen" = "tn_mg_l",
-                                                          "Total Phosphorus" = "tp_mg_l", 
+                                          "Nitrite"="nitrite_mg_l",
+                                          "TKN" = "tkn_mg_l",
+                                          "Total Nitrogen" = "tn_mg_l",
+                                          "Total Phosphorus" = "tp_mg_l", 
                                          "Orthophosphate"="orthophosph_mg_l",
                                          "Silica"= "silica_mg_l", 
                                          "Ammonia" = "ammonia_mg_l", 
@@ -249,8 +252,8 @@ ui <- dashboardPage(
              
              
              # Downloading tool
-             downloadButton("nut_downloadData", label = "Data Download", style="background-color: #3c8dbc; border-color: #367fa9; color:white"),                   # Download options
-             radioButtons("nut_file_type", label=NULL, inline = T,
+             downloadButton("nutr_downloadData", label = "Data Download", style="background-color: #3c8dbc; border-color: #367fa9; color:white"),                   # Download options
+             radioButtons("nutr_file_type", label=NULL, inline = T,
                           choices = c(".csv", ".xlsx", ".shp")), 
              br()
       )
@@ -258,8 +261,26 @@ ui <- dashboardPage(
       
       # Box for outputs 
       column(8,box(width=12,
-                   h4("Data Overview:")
-      )
+                   h4("Data Overview:"), 
+                   column(5, offset=7,
+                          
+                          # Map Options 
+                          uiOutput("nutr_subset"),
+                          tags$head(tags$style(".leaflet-top {z-index:999!important;}"))
+                          
+                   ), 
+                   
+                   
+                   #  MAP
+                  column(12, 
+                         div(style="font-weight:bold",textOutput("map_nutr_title")), 
+                         leafletOutput("map_nutr"),
+                         br(), 
+                         div(style="font-weight:bold",textOutput("nutr_boxplot_title")), 
+                         plotOutput("nutr_boxplot"))
+                   
+      
+                   )
       )
     ),
     
@@ -272,13 +293,70 @@ ui <- dashboardPage(
       
       # Box for inputs 
       column(4,box(width=12, 
-                   h4("Data Download:")
+                   h4("Data Download:"), 
+                   # Filters : years 
+                   sliderInput(
+                     inputId = "hab_wy",
+                     label = "Choose Years:",
+                     ticks = T,
+                     min = min(bio_vars_yr),
+                     max = max(bio_vars_yr),
+                     value = c(min(bio_vars_yr), max(bio_vars_yr)),
+                     sep = ""), 
+                   
+                   # Filters : watersheds 
+                   pickerInput(
+                     inputId = "hab_ws",
+                     label = "Choose Watersheds:",
+                     choices = as.character(bio_vars_ws),
+                     selected = as.character(bio_vars_ws),
+                     options = list(`actions-box` = TRUE, size = 20),
+                     multiple = T),
+                   
+                   # Filters : Scores 
+                   pickerInput("hab_type_dwlnd", label="Choose Habitat Metrics:",
+                               choices=c("Total PHAB" = "tot_phab",
+                                         'Channel Alteration Score'="channel_alt",
+                                         "Epifaunal Substrate Score"="epifaun_substr",
+                                         "Sediment Deposition Score" = "sed_deposition",
+                                         "Human Disturbance Index (SWAMP)" = "crhdi_swamp", 
+                                         "Shannon Diversity (H) of Aquatic Habitat Types"="shannon_aht",
+                                         "Shannon Diversity (H) of Natural Substrate Types"= "shannon_nst"), 
+                               selected=c("channel_alt", "epifaun_substr", "sed_deposition", 
+                                          "tot_phab", "crhdi_swamp", "shannon_aht", "shannon_nst"), 
+                               multiple=T),
+                   br(), 
+                   
+                   
+                   
+                   # Downloading tool
+                   downloadButton("hab_downloadData", label = "Data Download", style="background-color: #3c8dbc; border-color: #367fa9; color:white"),                   # Download options
+                   radioButtons("hab_file_type", label=NULL, inline = T,
+                                choices = c(".csv", ".xlsx", ".shp")), 
+                   br()
       )
       ),
       
       # Box for outputs 
       column(8,box(width=12,
-                   h4("Data Overview:")
+                   h4("Data Overview:"), 
+                   column(5, offset=7,
+                          
+                          # Map Options 
+                          uiOutput("hab_subset"),
+                          tags$head(tags$style(".leaflet-top {z-index:999!important;}"))
+                          
+                   ), 
+                   
+                   
+                   #  MAP
+                   column(12, 
+                          div(style="font-weight:bold",textOutput("map_hab_title")), 
+                          leafletOutput("map_hab"),
+                          br(), 
+                          div(style="font-weight:bold",textOutput("hab_boxplot_title")), 
+                          plotOutput("hab_boxplot"))
+                   
       )
       )
     ),
@@ -329,13 +407,10 @@ ui <- dashboardPage(
             
             #box for outputs
             column(8,
-                   box(width=12, height="2000px",
+                   box(width=12,
                        h4("Overview of data:"),
                        
-                       column(4, offset=8,
-                         tags$head(tags$style(".leaflet-top {z-index:999!important;}")),
-                         actionLink(inputId="map_temp_desc", label="Map Explanation", icon=NULL)
-                       ), 
+                         actionLink(inputId="map_temp_desc", label="Map Explanation", icon=NULL), 
                        
                        
                        column(12,
@@ -370,14 +445,55 @@ ui <- dashboardPage(
         # Box for inputs
         column(4,  
                box(width=12,
-                   h4("Data Download:")
+                   h4("Data Download:"),
+                   # Filter: years 
+                   sliderInput(
+                     inputId = "ph_dates",
+                     label = "Choose years:",
+                     min = wq_vars_date[1],
+                     max = wq_vars_date[2],
+                     value = wq_vars_date,
+                     timeFormat= "%b %Y"
+                   ),
+                   # Filter: watersheds 
+                   pickerInput(
+                     inputId = "ph_ws_dwld",
+                     label = "Choose Watersheds:",
+                     choices = as.character(bio_vars_ws),
+                     selected = as.character(bio_vars_ws),
+                     options = list(`actions-box` = TRUE, size = 20),
+                     multiple = T
+                   ), 
+                   radioButtons(inputId="ph_data_type", label="Choose pH Dataset:", 
+                                choices=c("Seasonal Monitoring (2 weeks, Spring vs. Fall)" = "ph_seas", 
+                                          "Grab samples" = "ph_grab"), 
+                                selected="ph_grab"),
+                   br(), 
+                   downloadButton("downloadData_ph", label = "Data Download", style="background-color: #3c8dbc; border-color: #367fa9; color:white"), 
+                   # Input: Choose file type -
+                   radioButtons("file_type_ph", NULL, inline = T,
+                                choices = c(".csv", ".xlsx"), 
+                                selected=".csv")
                    )
                ),
         
         #box for map and plots 
         column(8,
                box(width=12, 
-                   h4("Overview of data:")
+                   h4("Overview of data:"), 
+                   
+                   actionLink(inputId="map_ph_desc", label="Map Explanation", icon=NULL), 
+                   
+                   
+                   column(12,
+                          column(2, offset=5),
+                          leafletOutput("map_ph"),
+                          br(), 
+                          div(style="font-weight:bold; font-size:14px", "Plot of pH values:"), 
+                          br()
+                   ), 
+                   column(12,
+                          plotOutput("ph_plot"))
                    )
                )
       ),
@@ -395,14 +511,55 @@ ui <- dashboardPage(
         # Box for inputs
         column(4,  
                box(width=12,
-                   h4("Data Download:")
+                   h4("Data Download:"),
+                   # Filter: years 
+                   sliderInput(
+                     inputId = "do_dates",
+                     label = "Choose years:",
+                     min = wq_vars_date[1],
+                     max = wq_vars_date[2],
+                     value = wq_vars_date,
+                     timeFormat= "%b %Y"
+                   ),
+                   # Filter: watersheds 
+                   pickerInput(
+                     inputId = "do_ws_dwld",
+                     label = "Choose Watersheds:",
+                     choices = as.character(bio_vars_ws),
+                     selected = as.character(bio_vars_ws),
+                     options = list(`actions-box` = TRUE, size = 20),
+                     multiple = T
+                   ), 
+                   radioButtons(inputId="do_data_type", label="Choose Dataset:", 
+                                choices=c("Seasonal Monitoring (2 weeks, Spring vs. Fall)" = "do_seas", 
+                                          "Grab samples" = "do_grab"), 
+                                selected="do_grab"),
+                   br(), 
+                   downloadButton("downloadData_do", label = "Data Download", style="background-color: #3c8dbc; border-color: #367fa9; color:white"), 
+                   # Input: Choose file type -
+                   radioButtons("file_type_do", NULL, inline = T,
+                                choices = c(".csv", ".xlsx"), 
+                                selected=".csv")
                )
         ),
         
         #box for map and plots 
         column(8,
                box(width=12, 
-                   h4("Overview of data:")
+                   h4("Overview of data:"), 
+                   
+                   actionLink(inputId="map_do_desc", label="Map Explanation", icon=NULL), 
+                   
+                   
+                   column(12,
+                          column(2, offset=5),
+                          leafletOutput("map_do"),
+                          br(), 
+                          div(style="font-weight:bold; font-size:14px", "Plot of Dissolved Oxygen values:"), 
+                          br()
+                   ), 
+                   column(12,
+                          plotOutput("do_plot"))
                )
         )
       
@@ -410,6 +567,8 @@ ui <- dashboardPage(
     
     
     # Spe Cond #################################################################################################################################        
+    
+
     
     
     tabItem(
@@ -420,14 +579,55 @@ ui <- dashboardPage(
         # Box for inputs
         column(4,  
                box(width=12,
-                   h4("Data Download:")
+                   h4("Data Download:"),
+                   # Filter: years 
+                   sliderInput(
+                     inputId = "sp_cond_dates",
+                     label = "Choose years:",
+                     min = wq_vars_date[1],
+                     max = wq_vars_date[2],
+                     value = wq_vars_date,
+                     timeFormat= "%b %Y"
+                   ),
+                   # Filter: watersheds 
+                   pickerInput(
+                     inputId = "sp_cond_ws_dwld",
+                     label = "Choose Watersheds:",
+                     choices = as.character(bio_vars_ws),
+                     selected = as.character(bio_vars_ws),
+                     options = list(`actions-box` = TRUE, size = 20),
+                     multiple = T
+                   ), 
+                   radioButtons(inputId="sp_cond_data_type", label="Choose Dataset:", 
+                                choices=c("Seasonal Monitoring (2 weeks, Spring vs. Fall)" = "sp_cond_seas", 
+                                          "Grab samples" = "sp_cond_grab"), 
+                                selected="sp_cond_grab"),
+                   br(), 
+                   downloadButton("downloadData_sp_cond", label = "Data Download", style="background-color: #3c8dbc; border-color: #367fa9; color:white"), 
+                   # Input: Choose file type -
+                   radioButtons("file_type_sp_cond", NULL, inline = T,
+                                choices = c(".csv", ".xlsx"), 
+                                selected=".csv")
                )
         ),
         
         #box for map and plots 
         column(8,
                box(width=12, 
-                   h4("Overview of data:")
+                   h4("Overview of data:"), 
+                   
+                   actionLink(inputId="map_sp_cond_desc", label="Map Explanation", icon=NULL), 
+                   
+                   
+                   column(12,
+                          column(2, offset=5),
+                          leafletOutput("map_sp_cond"),
+                          br(), 
+                          div(style="font-weight:bold; font-size:14px", "Plot of Specific Conductivity values:"), 
+                          br()
+                   ), 
+                   column(12,
+                          plotOutput("sp_cond_plot"))
                )
         )
     ),
@@ -442,13 +642,58 @@ ui <- dashboardPage(
       
       # Box for inputs 
         column(4,box(width=12, 
-                     h4("Data Download:")
+                     h4("Data Download:"), 
+                     # Filters : years 
+                     sliderInput(
+                       inputId = "chlor_vars_yr",
+                       label = "Choose Years:",
+                       ticks = T,
+                       min = min(chlor_vars_yr),
+                       max = max(chlor_vars_yr),
+                       value = c(min(chlor_vars_yr), max(chlor_vars_yr)),
+                       sep = ""), 
+                     
+                     # Filters : watersheds 
+                     pickerInput(
+                       inputId = "chlor_ws",
+                       label = "Choose Watersheds:",
+                       choices = as.character(chlor_vars_ws),
+                       selected = as.character(chlor_vars_ws),
+                       options = list(`actions-box` = TRUE, size = 20),
+                       multiple = T),
+                     
+                     # Filters : Scores 
+                     pickerInput("chlor_type_dwlnd", label="Choose Data Type:",
+                                 choices=c("Total Chlorine" = "Chlorine, Free",
+                                           'Free Chlorine'="Chlorine, Total Residual"
+                                          ), 
+                                 selected=c("Chlorine, Free", "Chlorine, Total Residual"), 
+                                 multiple=T),
+                     br(), 
+                     
+                     
+                     
+                     # Downloading tool
+                     downloadButton("chlor_downloadData", label = "Data Download", style="background-color: #3c8dbc; border-color: #367fa9; color:white"),                   # Download options
+                     radioButtons("chlor_file_type", label=NULL, inline = T,
+                                  choices = c(".csv", ".xlsx", ".shp")), 
+                     br()
         )
         ),
         
         # Box for outputs 
         column(8,box(width=12,
-                     h4("Overview of data:")
+                     h4("Overview of data:"), 
+                     
+                     column(12,
+                            column(2, offset=5),
+                            leafletOutput("map_chlor"),
+                            br(), 
+                            div(style="font-weight:bold; font-size:14px", "Plot of Chlorine Concentrations (mg/L):"), 
+                            br()
+                     ), 
+                     column(12,
+                            plotOutput("chlor_plot"))
         )
         )
     ),
@@ -526,17 +771,47 @@ ui <- dashboardPage(
     tabItem(tabName = "trash",
             actionLink(inputId="trash_desc",label="Trash in Receiving Waters", style="font-size:160%"),
             br(),
-            h4("Receiving Water Monitoring... Preliminary Results... Targeted Sites only"),
-            
+
             column(4,
                    box(width=12,
-                       h4("Data Download:")
+                       h4("Data Download:"),
+                       sliderInput(
+                         inputId = "trash_wy",
+                         label = "Choose Years:",
+                         ticks = T,
+                         min = trash_vars_dates[1],
+                         max = trash_vars_dates[2],
+                         value = trash_vars_dates,
+                         timeFormat= "%b %Y"),
+                       pickerInput(
+                         inputId = "trash_city",
+                         label = "Choose city:",
+                         choices = trash_vars_city,
+                         selected = trash_vars_city,
+                         options = pickerOptions(actionsBox=T,liveSearch = T),
+                         multiple = T),
+                       checkboxGroupInput("trash_assmnt_type", label=NULL,
+                                          choices=c("Probabilistic", "Targeted"), 
+                                          selected=c("Probabilistic", "Targeted")), 
+                       br(), 
+                       
+                       
+                       
+                       # Downloading tool
+                       downloadButton("trash_downloadData", label = "Data Download", style="background-color: #3c8dbc; border-color: #367fa9; color:white"),                   # Download options
+                       radioButtons("trash_file_type", label=NULL, inline = T,
+                                    choices = c(".csv", ".xlsx", ".shp")), 
+                       br()
+                       
+                       
                        )
                    ),
             
             column(8,
                    box(width=12,
-                       h4("Data Overview:")
+                       h4("Data Overview:"),
+                       leafletOutput("trash_map")
+                       
                        )
                    )
             )
